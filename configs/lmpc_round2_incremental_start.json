@@ -1,0 +1,37 @@
+{
+  "controller_type": "lmpc",
+  "speed_scale_by_band": [1.0, 1.0, 1.0, 1.0],
+  "braking_accel_by_band": [4.905, 4.905, 4.905, 4.905],
+  "controller": {
+    "q_lateral": 35.0,
+    "q_heading": 30.0,
+    "q_speed": 2.0,
+    "q_lateral_velocity": 1.0,
+    "q_yaw_rate": 6.0,
+    "r_steer": 6.0,
+    "r_accel": 0.4,
+    "rd_steer": 250.0,
+    "rd_accel": 8.0,
+    "terminal_weight_scale": 4.0,
+    "steering_lead_s": 0.0,
+    "steering_filter_tau_s": 0.1,
+    "steering_rate_gain": 20.0,
+    "steering_jerk_limit_rad_s3": 60.0,
+    "steering_deadband": 0.0,
+    "steering_hysteresis": 0.0,
+    "solve_time_budget_ms": 18.0,
+    "reference_preview_s": 0.08,
+    "weight_map_kmh": [0.0, 40.0, 80.0, 140.0, 220.0],
+    "q_lateral_weight_map": [1.0, 1.0, 1.0, 0.60, 0.55],
+    "q_heading_weight_map": [1.0, 1.0, 1.0, 0.90, 0.85],
+    "q_yaw_rate_weight_map": [1.0, 1.0, 1.0, 1.0, 1.0],
+    "r_steer_weight_map": [1.0, 1.0, 1.0, 1.8, 2.0],
+    "rd_steer_weight_map": [1.0, 1.0, 1.2, 2.0, 2.4]
+  },
+  "speed_controller": {
+    "kp_accel": 0.08,
+    "kp_brake": 0.06,
+    "ki": 0.008,
+    "prediction_time_s": 0.0
+  }
+}

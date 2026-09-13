@@ -1,0 +1,136 @@
+{
+  "track": "Zhejiang: Human vs Auto",
+  "human_lap_s": 94.32850700011477,
+  "auto_lap_s": 103.76433799997903,
+  "gap_s": 9.435830999864265,
+  "human_max_speed_kmh": 239.354065,
+  "auto_max_speed_kmh": 229.151794,
+  "auto_p95_abs_lateral_error_m": 0.5349203999999999,
+  "auto_max_tyres_out": 2,
+  "bin_m": 25.0,
+  "auto_speed_delta_mean_kmh": -10.156938443999998,
+  "slowest_auto_bins": [
+    {
+      "distance_m": 1875.0,
+      "delta_kmh": -31.369507,
+      "human_speed_kmh": 144.9258195,
+      "auto_speed_kmh": 113.55631249999999
+    },
+    {
+      "distance_m": 1300.0,
+      "delta_kmh": -25.728376249999997,
+      "human_speed_kmh": 95.91021525,
+      "auto_speed_kmh": 70.181839
+    },
+    {
+      "distance_m": 225.0,
+      "delta_kmh": -24.428960749999973,
+      "human_speed_kmh": 143.33010099999998,
+      "auto_speed_kmh": 118.90114025000001
+    },
+    {
+      "distance_m": 1075.0,
+      "delta_kmh": -23.67877899999999,
+      "human_speed_kmh": 143.558975,
+      "auto_speed_kmh": 119.88019600000001
+    },
+    {
+      "distance_m": 1325.0,
+      "delta_kmh": -23.343982999999994,
+      "human_speed_kmh": 90.80705449999999,
+      "auto_speed_kmh": 67.4630715
+    },
+    {
+      "distance_m": 200.0,
+      "delta_kmh": -23.02119074999996,
+      "human_speed_kmh": 176.29332349999999,
+      "auto_speed_kmh": 153.27213275000003
+    },
+    {
+      "distance_m": 1850.0,
+      "delta_kmh": -21.14173550000001,
+      "human_speed_kmh": 162.9295505,
+      "auto_speed_kmh": 141.787815
+    },
+    {
+      "distance_m": 1900.0,
+      "delta_kmh": -21.126657749999993,
+      "human_speed_kmh": 103.8354035,
+      "auto_speed_kmh": 82.70874575
+    },
+    {
+      "distance_m": 1650.0,
+      "delta_kmh": -20.553148000000007,
+      "human_speed_kmh": 114.61579675,
+      "auto_speed_kmh": 94.06264875
+    },
+    {
+      "distance_m": 550.0,
+      "delta_kmh": -20.069744249999985,
+      "human_speed_kmh": 119.32478325,
+      "auto_speed_kmh": 99.25503900000001
+    },
+    {
+      "distance_m": 825.0,
+      "delta_kmh": -19.910234500000016,
+      "human_speed_kmh": 96.43565175,
+      "auto_speed_kmh": 76.52541724999999
+    },
+    {
+      "distance_m": 1275.0,
+      "delta_kmh": -19.589832,
+      "human_speed_kmh": 89.00867825,
+      "auto_speed_kmh": 69.41884625
+    }
+  ],
+  "fastest_auto_bins_vs_human": [
+    {
+      "distance_m": 1375.0,
+      "delta_kmh": -2.4743235000000112,
+      "human_speed_kmh": 79.42326750000001,
+      "auto_speed_kmh": 76.948944
+    },
+    {
+      "distance_m": 125.0,
+      "delta_kmh": -2.436065500000012,
+      "human_speed_kmh": 196.9795305,
+      "auto_speed_kmh": 194.543465
+    },
+    {
+      "distance_m": 2750.0,
+      "delta_kmh": -0.17570925000001125,
+      "human_speed_kmh": 216.10947825,
+      "auto_speed_kmh": 215.93376899999998
+    },
+    {
+      "distance_m": 625.0,
+      "delta_kmh": 0.018476750000004927,
+      "human_speed_kmh": 88.595579,
+      "auto_speed_kmh": 88.61405575
+    },
+    {
+      "distance_m": 650.0,
+      "delta_kmh": 2.369751249999993,
+      "human_speed_kmh": 95.431854,
+      "auto_speed_kmh": 97.80160525
+    },
+    {
+      "distance_m": 2775.0,
+      "delta_kmh": 4.3531837499999995,
+      "human_speed_kmh": 188.75998325,
+      "auto_speed_kmh": 193.113167
+    },
+    {
+      "distance_m": 2825.0,
+      "delta_kmh": 4.754808499999996,
+      "human_speed_kmh": 125.604063,
+      "auto_speed_kmh": 130.3588715
+    },
+    {
+      "distance_m": 2800.0,
+      "delta_kmh": 5.344818000000032,
+      "human_speed_kmh": 157.60467549999998,
+      "auto_speed_kmh": 162.94949350000002
+    }
+  ]
+}

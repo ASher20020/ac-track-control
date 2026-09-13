@@ -1,0 +1,45 @@
+{
+  "generated_on": "2026-09-14",
+  "stack": {
+    "control_hz": 50,
+    "lateral_mpc": {
+      "type": "linear_dynamic_bicycle",
+      "horizon": 20,
+      "dt_s": 0.02,
+      "solver": "OSQP"
+    },
+    "longitudinal_mpc": {
+      "type": "incremental_acceleration_mpc",
+      "horizon": 50,
+      "dt_s": 0.05,
+      "solver": "OSQP"
+    }
+  },
+  "results": {
+    "shanghai": {
+      "human_lap_s": 136.247968,
+      "auto_lap_s": 143.542842,
+      "gap_s": 7.294874,
+      "auto_max_speed_kmh": 268.725983,
+      "auto_p95_lateral_error_m": 0.565602,
+      "verified_config": "configs/lmpc_shanghai_v63_h50dt05_265.json",
+      "final_candidate": "configs/final/shanghai_final.json"
+    },
+    "zhejiang": {
+      "human_lap_s": 94.328507,
+      "auto_lap_s": 103.764338,
+      "gap_s": 9.435831,
+      "auto_max_speed_kmh": 229.151794,
+      "auto_p95_lateral_error_m": 0.534920,
+      "verified_config": "configs/lmpc_zhejiang_manual_v59_microspeed.json",
+      "final_candidate": "configs/final/zhejiang_final.json"
+    },
+    "nordschleife": {
+      "auto_lap_s": 526.824546,
+      "auto_max_speed_kmh": 293.817749,
+      "auto_p95_lateral_error_m": 0.461,
+      "tyres_out": 0,
+      "final_candidate": "configs/final/nordschleife_candidate_v2_safe.json"
+    }
+  }
+}

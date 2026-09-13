@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AC Track Control Monitor</title>
+  <style>
+    :root {
+      --bg: #0b0f12;
+      --panel: #13191e;
+      --panel-2: #182027;
+      --line: #29343c;
+      --text: #eef4f7;
+      --muted: #8c9aa3;
+      --cyan: #36c7d4;
+      --orange: #ff9d3b;
+      --green: #7fd36b;
+      --red: #f05d5e;
+      --yellow: #f4d35e;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    body { padding: 14px; }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+      font-weight: 650;
+    }
+    #status {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(120px, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 9px 11px;
+      min-width: 0;
+    }
+    .card .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    .card .value {
+      margin-top: 3px;
+      font-size: 21px;
+      font-weight: 650;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      min-width: 0;
+    }
+    .panel-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    .panel-title {
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .legend {
+      display: flex;
+      gap: 11px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 170px;
+      background: #0d1317;
+      border-radius: 5px;
+    }
+    .gg-panel canvas { height: 360px; }
+    .preview-panel { grid-column: span 2; }
+    .preview-panel canvas { height: 250px; }
+    .laps-panel { grid-column: span 1; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 7px 6px;
+      border-bottom: 1px solid var(--line);
+    }
+    th { color: var(--muted); font-weight: 500; }
+    .best { color: var(--green); }
+    .latest { color: var(--cyan); }
+    .minor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      grid-column: span 2;
+    }
+    @media (max-width: 1100px) {
+      .cards { grid-template-columns: repeat(3, 1fr); }
+      .grid { grid-template-columns: 1fr; }
+      .gg-panel, .laps-panel, .preview-panel, .minor-grid { grid-column: span 1; }
+      .minor-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      body { padding: 8px; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .card .value { font-size: 18px; }
+      canvas { height: 150px; }
+      .gg-panel canvas { height: 300px; }
+      .preview-panel canvas { height: 220px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AC Track Control Monitor</h1>
+    <div id="status">等待遥测...</div>
+  </header>
+
+  <section class="cards">
+    <div class="card"><div class="label">Speed</div><div class="value" id="m-speed">--</div></div>
+    <div class="card"><div class="label">Lateral Error</div><div class="value" id="m-lat">--</div></div>
+    <div class="card"><div class="label">Heading Error</div><div class="value" id="m-head">--</div></div>
+    <div class="card"><div class="label">Yaw Rate</div><div class="value" id="m-yaw">--</div></div>
+    <div class="card"><div class="label">Body Slip</div><div class="value" id="m-beta">--</div></div>
+    <div class="card"><div class="label">Steering</div><div class="value" id="m-steer">--</div></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">横向误差 / 航向误差</div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--cyan)"></i>横向 m</span>
+          <span><i class="dot" style="background:var(--orange)"></i>航向 deg</span>
+        </div>
+      </div>
+      <canvas id="chart-errors"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">车速</div>
+        <div class="legend"><span><i class="dot" style="background:var(--green)"></i>km/h</span></div>
+      </div>
+      <canvas id="chart-speed"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">横摆角速度 / 质心侧偏角</div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--cyan)"></i>yaw deg/s</span>
+          <span><i class="dot" style="background:var(--red)"></i>beta deg</span>
+        </div>
+      </div>
+      <canvas id="chart-dynamics"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">方向盘转角</div>
+        <div class="legend"><span><i class="dot" style="background:var(--yellow)"></i>deg</span></div>
+      </div>
+      <canvas id="chart-steer"></canvas>
+    </div>
+
+    <div class="panel preview-panel">
+      <div class="panel-head">
+        <div class="panel-title">MPC 预测轨迹 / 参考轨迹</div>
+        <div class="legend">
+          <span><i class="dot" style="background:#56636b"></i>赛道</span>
+          <span><i class="dot" style="background:var(--cyan)"></i>参考</span>
+          <span><i class="dot" style="background:var(--orange)"></i>预测</span>
+          <span><i class="dot" style="background:var(--green)"></i>车辆</span>
+        </div>
+      </div>
+      <canvas id="chart-preview"></canvas>
+    </div>
+
+    <div class="panel gg-panel">
+      <div class="panel-head">
+        <div class="panel-title">G-G 图</div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--cyan)"></i>当前</span>
+          <span><i class="dot" style="background:#56636b"></i>历史</span>
+        </div>
+      </div>
+      <canvas id="chart-gg"></canvas>
+    </div>
+
+    <div class="panel laps-panel">
+      <div class="panel-head">
+        <div class="panel-title">圈速</div>
+        <div class="legend"><span id="lap-current">当前 --</span></div>
+      </div>
+      <table>
+        <thead><tr><th>Lap</th><th>Time</th><th>Delta</th></tr></thead>
+        <tbody id="lap-body"></tbody>
+      </table>
+    </div>
+
+    <div class="minor-grid">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">车辆轨迹</div>
+          <div class="legend"><span><i class="dot" style="background:var(--green)"></i>车辆</span></div>
+        </div>
+        <canvas id="chart-position"></canvas>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">横纵向加速度</div>
+          <div class="legend">
+            <span><i class="dot" style="background:var(--cyan)"></i>横向 g</span>
+            <span><i class="dot" style="background:var(--orange)"></i>纵向 g</span>
+          </div>
+        </div>
+        <canvas id="chart-accel"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const COLORS = {
+      cyan: "#36c7d4",
+      orange: "#ff9d3b",
+      green: "#7fd36b",
+      red: "#f05d5e",
+      yellow: "#f4d35e",
+      grid: "#263138",
+      text: "#8c9aa3",
+      zero: "#52616a"
+    };
+
+    let latest = null;
+    let trackData = { points: [], finish: [0, 0] };
+    let previewData = {};
+
+    function fmt(value, digits = 1, suffix = "") {
+      return Number.isFinite(value) ? value.toFixed(digits) + suffix : "--";
+    }
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(100, canvas.clientWidth);
+      const height = Math.max(80, canvas.clientHeight);
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, width, height };
+    }
+
+    function drawGrid(ctx, width, height, leftPad = 42, rightPad = 12, topPad = 10, bottomPad = 22) {
+      ctx.clearRect(0, 0, width, height);
+      ctx.strokeStyle = COLORS.grid;
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 6; i++) {
+        const x = leftPad + (width - leftPad - rightPad) * i / 6;
+        ctx.beginPath(); ctx.moveTo(x, topPad); ctx.lineTo(x, height - bottomPad); ctx.stroke();
+      }
+      for (let i = 0; i <= 4; i++) {
+        const y = topPad + (height - topPad - bottomPad) * i / 4;
+        ctx.beginPath(); ctx.moveTo(leftPad, y); ctx.lineTo(width - rightPad, y); ctx.stroke();
+      }
+    }
+
+    function extent(values, includeZero = true, minimumSpan = 0.1) {
+      const finite = values.filter(Number.isFinite);
+      if (!finite.length) return [-minimumSpan, minimumSpan];
+      let min = Math.min(...finite), max = Math.max(...finite);
+      if (includeZero) { min = Math.min(min, 0); max = Math.max(max, 0); }
+      if (max - min < minimumSpan) {
+        const mid = (min + max) / 2;
+        min = mid - minimumSpan / 2;
+        max = mid + minimumSpan / 2;
+      }
+      const pad = (max - min) * 0.1;
+      return [min - pad, max + pad];
+    }
+
+    function drawAxes(ctx, width, height, yMin, yMax, leftPad = 42, rightPad = 12, topPad = 10, bottomPad = 22, color = COLORS.text, align = "left") {
+      ctx.fillStyle = color;
+      ctx.font = "10px Segoe UI";
+      ctx.textAlign = align === "left" ? "right" : "left";
+      for (let i = 0; i <= 4; i++) {
+        const y = topPad + (height - topPad - bottomPad) * i / 4;
+        const value = yMax - (yMax - yMin) * i / 4;
+        ctx.fillText(value.toFixed(Math.abs(yMax - yMin) < 2 ? 2 : 1), align === "left" ? leftPad - 5 : width - rightPad + 5, y + 3);
+      }
+    }
+
+    function drawLineChart(canvas, samples, series, windowS = 30) {
+      const { ctx, width, height } = setupCanvas(canvas);
+      const leftPad = 42, rightPad = series.some(s => s.axis === "right") ? 42 : 12, topPad = 10, bottomPad = 22;
+      drawGrid(ctx, width, height, leftPad, rightPad, topPad, bottomPad);
+      if (!samples.length) return;
+      const end = samples[samples.length - 1].time;
+      const visible = samples.filter(s => s.time >= end - windowS);
+      const leftSeries = series.filter(s => s.axis !== "right");
+      const rightSeries = series.filter(s => s.axis === "right");
+      const [leftMin, leftMax] = extent(leftSeries.flatMap(s => visible.map(row => row[s.key])), true);
+      const [rightMin, rightMax] = rightSeries.length ? extent(rightSeries.flatMap(s => visible.map(row => row[s.key])), true) : [0, 1];
+      drawAxes(ctx, width, height, leftMin, leftMax, leftPad, rightPad, topPad, bottomPad, COLORS.text, "left");
+      if (rightSeries.length) drawAxes(ctx, width, height, rightMin, rightMax, leftPad, rightPad, topPad, bottomPad, COLORS.orange, "right");
+
+      for (const item of series) {
+        const isRight = item.axis === "right";
+        const lo = isRight ? rightMin : leftMin;
+        const hi = isRight ? rightMax : leftMax;
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = 1.7;
+        ctx.beginPath();
+        visible.forEach((row, index) => {
+          const x = leftPad + (width - leftPad - rightPad) * (1 - (end - row.time) / windowS);
+          const y = topPad + (height - topPad - bottomPad) * (1 - (row[item.key] - lo) / (hi - lo));
+          if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+      const zero = visible.length && leftMin <= 0 && leftMax >= 0
+        ? topPad + (height - topPad - bottomPad) * (1 - (0 - leftMin) / (leftMax - leftMin))
+        : null;
+      if (zero !== null) {
+        ctx.strokeStyle = COLORS.zero; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(leftPad, zero); ctx.lineTo(width - rightPad, zero); ctx.stroke();
+      }
+    }
+
+    function drawSteer(canvas, samples) {
+      const { ctx, width, height } = setupCanvas(canvas);
+      const leftPad = 42, rightPad = 12, topPad = 10, bottomPad = 22;
+      drawGrid(ctx, width, height, leftPad, rightPad, topPad, bottomPad);
+      const end = samples.length ? samples[samples.length - 1].time : 0;
+      const visible = samples.filter(s => s.time >= end - 30);
+      const maxAbs = Math.max(
+        30,
+        ...visible.map(row => Math.abs(row.steer_deg || 0) * 1.15)
+      );
+      ctx.strokeStyle = COLORS.yellow; ctx.lineWidth = 1.8; ctx.beginPath();
+      visible.forEach((row, index) => {
+        const x = leftPad + (width - leftPad - rightPad) * (1 - (end - row.time) / 30);
+        const y = topPad + (height - topPad - bottomPad) * (1 - (row.steer_deg + maxAbs) / (2 * maxAbs));
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      drawAxes(ctx, width, height, -maxAbs, maxAbs, leftPad, rightPad, topPad, bottomPad);
+    }
+
+    function drawGG(canvas, samples) {
+      const { ctx, width, height } = setupCanvas(canvas);
+      ctx.clearRect(0, 0, width, height);
+      const cx = width / 2, cy = height / 2;
+      const radius = Math.min(width, height) * 0.40;
+      ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1;
+      for (const factor of [0.25, 0.5, 0.75, 1.0]) {
+        ctx.beginPath(); ctx.arc(cx, cy, radius * factor, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(cx - radius, cy); ctx.lineTo(cx + radius, cy); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx, cy - radius); ctx.lineTo(cx, cy + radius); ctx.stroke();
+      const end = samples.length ? samples[samples.length - 1].time : 0;
+      const visible = samples.filter(s => s.time >= end - 30);
+      visible.forEach((row, index) => {
+        const x = cx + Math.max(-1, Math.min(1, row.g_lat)) * radius;
+        const y = cy - Math.max(-1, Math.min(1, row.g_long)) * radius;
+        const alpha = 0.12 + 0.75 * index / Math.max(1, visible.length - 1);
+        ctx.fillStyle = `rgba(54,199,212,${alpha})`;
+        ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
+      });
+      if (visible.length) {
+        const row = visible[visible.length - 1];
+        const x = cx + Math.max(-1, Math.min(1, row.g_lat)) * radius;
+        const y = cy - Math.max(-1, Math.min(1, row.g_long)) * radius;
+        ctx.fillStyle = COLORS.orange;
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = COLORS.text; ctx.font = "11px Segoe UI";
+      ctx.textAlign = "center"; ctx.fillText("Ay / Lateral g", cx, height - 8);
+      ctx.save(); ctx.translate(13, cy); ctx.rotate(-Math.PI / 2);
+      ctx.fillText("Ax / Accel-Brake g", 0, 0); ctx.restore();
+    }
+
+    function drawPreview(canvas, data, preview) {
+      const { ctx, width, height } = setupCanvas(canvas);
+      ctx.clearRect(0, 0, width, height);
+      const samples = data.samples || [];
+      const current = samples.length
+        ? [samples.at(-1).position_x, samples.at(-1).position_z]
+        : preview.current;
+      if (!current || !trackData.points.length) return;
+      const heading = samples.length
+        ? (samples.at(-1).heading_world || 0)
+        : 0;
+      const cosHeading = Math.cos(heading);
+      const sinHeading = Math.sin(heading);
+      const toLocal = point => {
+        const dx = point[0] - current[0];
+        const dz = point[1] - current[1];
+        return [
+          -dx * sinHeading + dz * cosHeading,
+          dx * cosHeading + dz * sinHeading,
+        ];
+      };
+      const radiusM = 45;
+      const localTrack = trackData.points.filter(point => {
+        const dx = point[0] - current[0];
+        const dz = point[1] - current[1];
+        return dx * dx + dz * dz <= radiusM * radiusM;
+      }).map(toLocal);
+      const referenceLocal = (preview.reference || []).map(toLocal);
+      const predictedLocal = (preview.predicted || []).map(toLocal);
+      const allPoints = [
+        ...localTrack,
+        ...referenceLocal,
+        ...predictedLocal,
+        [0, 0],
+      ];
+      if (!allPoints.length) return;
+      const maxLeft = Math.max(20, ...allPoints.map(point => Math.abs(point[0])) );
+      const maxForward = Math.max(20, ...allPoints.map(point => Math.abs(point[1])) );
+      const scale = Math.min(
+        (width - 36) / (2 * maxForward),
+        (height - 36) / (2 * maxLeft)
+      );
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const px = point => centerX + point[1] * scale;
+      const py = point => centerY - point[0] * scale;
+
+      function polyline(points, color, lineWidth, alpha = 1, dots = false) {
+        if (!points || points.length < 2) return;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        points.forEach((point, index) => {
+          const x = px(point), y = py(point);
+          if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+        if (dots) {
+          ctx.fillStyle = color;
+          points.forEach(point => {
+            ctx.beginPath(); ctx.arc(px(point), py(point), 2.4, 0, Math.PI * 2); ctx.fill();
+          });
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      polyline(localTrack, "#65727a", 3, 0.9);
+      polyline(referenceLocal, COLORS.cyan, 2, 0.9, true);
+      polyline(predictedLocal, COLORS.orange, 2.4, 1, true);
+      ctx.fillStyle = COLORS.green;
+      ctx.beginPath();
+      ctx.moveTo(centerX + 8, centerY);
+      ctx.lineTo(centerX - 6, centerY - 6);
+      ctx.lineTo(centerX - 6, centerY + 6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = COLORS.text;
+      ctx.font = "11px Segoe UI";
+      ctx.textAlign = "left";
+      ctx.fillText(`车头向右 · 局部 ${radiusM.toFixed(0)}m`, 14, 16);
+    }
+
+    function drawPosition(canvas, samples) {
+      const { ctx, width, height } = setupCanvas(canvas);
+      ctx.clearRect(0, 0, width, height);
+      const visible = samples.filter(s => s.time >= (samples.at(-1)?.time ?? 0) - 30);
+      if (!visible.length) return;
+      const xs = visible.map(s => s.position_x), zs = visible.map(s => s.position_z);
+      const [xMin, xMax] = extent(xs, false, 5), [zMin, zMax] = extent(zs, false, 5);
+      ctx.strokeStyle = COLORS.green; ctx.lineWidth = 2; ctx.beginPath();
+      visible.forEach((row, index) => {
+        const x = 12 + (width - 24) * (row.position_x - xMin) / Math.max(1e-6, xMax - xMin);
+        const y = height - 12 - (height - 24) * (row.position_z - zMin) / Math.max(1e-6, zMax - zMin);
+        if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      const last = visible[visible.length - 1];
+      const x = 12 + (width - 24) * (last.position_x - xMin) / Math.max(1e-6, xMax - xMin);
+      const y = height - 12 - (height - 24) * (last.position_z - zMin) / Math.max(1e-6, zMax - zMin);
+      ctx.fillStyle = COLORS.orange; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function updateMetrics(sample) {
+      if (!sample) return;
+      document.getElementById("m-speed").textContent = fmt(sample.speed, 1, " km/h");
+      document.getElementById("m-lat").textContent = fmt(sample.lateral_error, 3, " m");
+      document.getElementById("m-head").textContent = fmt(sample.heading_error_deg, 2, " deg");
+      document.getElementById("m-yaw").textContent = fmt(sample.yaw_rate_deg_s, 2, " deg/s");
+      document.getElementById("m-beta").textContent = fmt(sample.body_slip, 2, " deg");
+      document.getElementById("m-steer").textContent = fmt(sample.steer_deg, 2, " deg");
+    }
+
+    function updateLaps(data) {
+      const laps = data.lap_times_s || [];
+      document.getElementById("lap-current").textContent = `当前 ${fmt(data.current_lap_s, 1, "s")}`;
+      const body = document.getElementById("lap-body");
+      body.innerHTML = "";
+      const best = laps.length ? Math.min(...laps) : null;
+      laps.slice().reverse().slice(0, 8).forEach((lap, reverseIndex) => {
+        const index = laps.length - reverseIndex;
+        const row = document.createElement("tr");
+        const cls = lap === best ? "best" : (index === laps.length ? "latest" : "");
+        row.innerHTML = `<td>${index}</td><td class="${cls}">${lap.toFixed(3)}s</td><td class="${cls}">${(lap - (best ?? lap)).toFixed(3)}s</td>`;
+        body.appendChild(row);
+      });
+    }
+
+    async function loadTrack() {
+      try {
+        const response = await fetch("/api/track", { cache: "no-store" });
+        if (response.ok) trackData = await response.json();
+      } catch (_) {
+        // Keep the last track geometry until telemetry reconnects.
+      }
+    }
+
+    async function refresh() {
+      try {
+        const [response, previewResponse] = await Promise.all([
+          fetch("/api/telemetry", { cache: "no-store" }),
+          fetch("/api/preview", { cache: "no-store" }),
+        ]);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        previewData = previewResponse.ok
+          ? await previewResponse.json()
+          : {};
+        latest = data;
+        document.getElementById("status").textContent = data.connected
+          ? `${data.car || "AC"} · ${data.track || ""} · 30s rolling`
+          : `等待遥测 · ${data.error || ""}`;
+        const samples = data.samples || [];
+        const last = samples[samples.length - 1];
+        updateMetrics(last);
+        drawLineChart(document.getElementById("chart-errors"), samples, [
+          { key: "lateral_error", color: COLORS.cyan },
+          { key: "heading_error_deg", color: COLORS.orange, axis: "right" }
+        ]);
+        drawLineChart(document.getElementById("chart-speed"), samples, [
+          { key: "speed", color: COLORS.green }
+        ]);
+        drawLineChart(document.getElementById("chart-dynamics"), samples, [
+          { key: "yaw_rate_deg_s", color: COLORS.cyan },
+          { key: "body_slip", color: COLORS.red, axis: "right" }
+        ]);
+        drawSteer(document.getElementById("chart-steer"), samples);
+        drawGG(document.getElementById("chart-gg"), samples);
+        drawPreview(
+          document.getElementById("chart-preview"),
+          data,
+          previewData
+        );
+        drawPosition(document.getElementById("chart-position"), samples);
+        drawLineChart(document.getElementById("chart-accel"), samples, [
+          { key: "g_lat", color: COLORS.cyan },
+          { key: "g_long", color: COLORS.orange }
+        ]);
+        updateLaps(data);
+      } catch (error) {
+        document.getElementById("status").textContent = `看板连接中断 · ${error.message}`;
+      }
+    }
+
+    refresh();
+    loadTrack();
+    setInterval(loadTrack, 5000);
+    setInterval(refresh, 100);
+    window.addEventListener("resize", () => {
+      if (latest) refresh();
+    });
+  </script>
+</body>
+</html>

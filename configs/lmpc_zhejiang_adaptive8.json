@@ -1,0 +1,261 @@
+{
+  "controller_type": "lmpc",
+  "speed_scale_by_band": [
+    1.0,
+    1.0,
+    1.0,
+    1.0,
+    1.1,
+    1.1,
+    1.1,
+    1.1
+  ],
+  "braking_accel_by_band": [
+    17.25,
+    17.0,
+    16.7,
+    16.4,
+    16.15,
+    16.0,
+    15.8,
+    15.6
+  ],
+  "controller": {
+    "q_lateral": 35.06465763967852,
+    "q_heading": 21.9,
+    "q_speed": 2.0,
+    "q_lateral_velocity": 1.0,
+    "q_yaw_rate": 1.37,
+    "r_steer": 14.707673699361242,
+    "r_accel": 0.4,
+    "rd_steer": 520.0,
+    "rd_accel": 8.0,
+    "terminal_weight_scale": 4.0,
+    "steering_lead_s": 0.0,
+    "steering_filter_tau_s": 0.1,
+    "steering_actuator_tau_s": 0.14,
+    "steering_state_weight": 0.0,
+    "use_steering_actuator_model": true,
+    "steering_deadband": 0.0,
+    "steering_hysteresis": 0.0,
+    "solve_time_budget_ms": 18.0,
+    "reference_preview_s": 0.08,
+    "weight_map_kmh": [
+      0.0,
+      40.0,
+      60.0,
+      80.0,
+      100.0,
+      140.0,
+      180.0,
+      220.0
+    ],
+    "q_lateral_weight_map": [
+      1.0,
+      1.21550625,
+      1.0,
+      0.85,
+      0.7,
+      0.65,
+      0.6,
+      0.6
+    ],
+    "q_heading_weight_map": [
+      1.0,
+      1.16985856,
+      1.0,
+      0.95,
+      0.9,
+      0.85,
+      0.8,
+      0.8
+    ],
+    "q_yaw_rate_weight_map": [
+      1.0,
+      1.36048896,
+      1.15,
+      1.15,
+      1.18,
+      1.2,
+      1.18,
+      1.18
+    ],
+    "r_steer_weight_map": [
+      1.6,
+      2.448880128,
+      2.8,
+      3.2,
+      3.5,
+      4.0,
+      4.0,
+      4.0
+    ],
+    "rd_steer_weight_map": [
+      1.6,
+      3.14821125,
+      3.2,
+      3.6,
+      4.0,
+      5.0,
+      5.0,
+      5.0
+    ],
+    "steer_lateral_gain_map": [
+      73.07960449087456,
+      73.07960449087456,
+      73.07960449087456,
+      73.07960449087456,
+      73.07960449087456,
+      73.07960449087456,
+      73.07960449087456,
+      73.07960449087456
+    ],
+    "steer_yaw_gain_map": [
+      42.90635873888399,
+      42.90635873888399,
+      42.90635873888399,
+      42.90635873888399,
+      42.90635873888399,
+      42.90635873888399,
+      42.90635873888399,
+      42.90635873888399
+    ],
+    "yaw_inertia_map_kgm2": [
+      1500.0,
+      1500.0,
+      1500.0,
+      1500.0,
+      1500.0,
+      1500.0,
+      1500.0,
+      1500.0
+    ],
+    "lateral_velocity_damping_map": [
+      319.3788489288126,
+      319.3788489288126,
+      319.3788489288126,
+      319.3788489288126,
+      319.3788489288126,
+      319.3788489288126,
+      319.3788489288126,
+      319.3788489288126
+    ],
+    "lateral_yaw_coupling_map": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "yaw_velocity_coupling_map": [
+      43.19931121735828,
+      43.19931121735828,
+      43.19931121735828,
+      43.19931121735828,
+      43.19931121735828,
+      43.19931121735828,
+      43.19931121735828,
+      43.19931121735828
+    ],
+    "yaw_rate_damping_map": [
+      -241.90007093212003,
+      -241.90007093212003,
+      -241.90007093212003,
+      -241.90007093212003,
+      -241.90007093212003,
+      -241.90007093212003,
+      -241.90007093212003,
+      -241.90007093212003
+    ]
+  },
+  "speed_controller": {
+    "kp_accel": 0.18,
+    "kp_brake": 0.15,
+    "ki": 0.012,
+    "prediction_time_s": 0.08
+  },
+  "longitudinal_controller": {
+    "response_tau_s": 0.096,
+    "q_speed": 12.0,
+    "q_accel": 3.0,
+    "r_accel": 1.2,
+    "r_jerk": 70.0,
+    "max_accel_mps2": 3.072,
+    "max_brake_mps2": 19.6,
+    "max_jerk_mps3": 7.6,
+    "max_brake_jerk_mps3": 39.9,
+    "reference_filter_up_tau_s": 0.15,
+    "reference_filter_down_tau_s": 0.0,
+    "lateral_weight_schedule_g": [
+      0.0,
+      0.3,
+      0.6,
+      0.9,
+      1.2
+    ],
+    "r_accel_lateral_scale": [
+      1.0,
+      1.1,
+      1.3,
+      1.55,
+      1.8
+    ],
+    "r_jerk_lateral_scale": [
+      1.0,
+      1.2,
+      1.5,
+      1.9,
+      2.4
+    ],
+    "speed_weight_schedule_kmh": [
+      0.0,
+      80.0,
+      140.0,
+      200.0,
+      260.0
+    ],
+    "r_accel_speed_scale": [
+      1.0,
+      1.05,
+      1.15,
+      1.3,
+      1.45
+    ],
+    "r_jerk_speed_scale": [
+      1.0,
+      1.15,
+      1.4,
+      1.75,
+      2.0
+    ],
+    "coast_down_accel_map_kmh": [
+      0.0,
+      40.0,
+      80.0,
+      120.0,
+      160.0,
+      200.0,
+      240.0,
+      280.0
+    ],
+    "coast_down_accel_map_mps2": [
+      0.35,
+      0.65,
+      0.75,
+      0.85,
+      1.05,
+      1.35,
+      1.75,
+      2.2
+    ]
+  },
+  "planning": {
+    "line_mode": "fast_lane_ai",
+    "target_lateral_accel_g": 0.7,
+    "target_edge_clearance_m": 1.0,
+    "hard_edge_clearance_m": 0.8
+  }
+}

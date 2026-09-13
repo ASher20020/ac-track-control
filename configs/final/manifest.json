@@ -1,0 +1,69 @@
+{
+  "project": "AC Track Control",
+  "generated_on": "2026-09-14",
+  "shared_vehicle_model": "configs/models/lmpc_calibrated_model_v10.json",
+  "tracks": {
+    "shanghai": {
+      "status": "validated_baseline_with_final_candidate",
+      "final_config": "configs/final/shanghai_final.json",
+      "launcher": "tools/start_v64_shanghai.ps1",
+      "verified_best_lap_s": 143.542842,
+      "verified_log": "logs/lmpc_shanghai_v63_h50dt05_265_5lap.csv",
+      "verified_config": "configs/lmpc_shanghai_v63_h50dt05_265.json",
+      "final_candidate_log": "logs/lmpc_shanghai_v64_fullbrake_300_5lap.csv",
+      "final_candidate_complete_lap_s": 159.73669,
+      "notes": [
+        "The verified best lap used V63 with a 265 km/h cap.",
+        "V64 is the retained final candidate with full braking and a 300 km/h cap.",
+        "Use the V63 comparison figure when citing the 143.543 s result."
+      ]
+    },
+    "zhejiang": {
+      "status": "synchronized_longitudinal_candidate",
+      "final_config": "configs/final/zhejiang_final.json",
+      "launcher": "tools/start_zhejiang_final.ps1",
+      "verified_best_lap_s": 103.764338,
+      "verified_log": "logs/lmpc_v59_rollback_5lap.csv",
+      "verified_config": "configs/lmpc_zhejiang_manual_v59_microspeed.json",
+      "verified_longitudinal_horizon": 45,
+      "verified_longitudinal_dt_s": 0.03,
+      "verified_max_speed_kmh": 280.0,
+      "final_speed_scale_by_band": [
+        1.16,
+        1.23,
+        1.24,
+        1.28,
+        1.29,
+        1.29,
+        1.31,
+        1.33,
+        1.33
+      ],
+      "notes": [
+        "The final config keeps the Zhejiang-specific speed scaling.",
+        "Its longitudinal MPC section is synchronized with Shanghai.",
+        "The synchronized 50 x 0.05 s setup has not yet been re-run end-to-end."
+      ]
+    },
+    "nordschleife": {
+      "status": "safe_candidate",
+      "final_config": "configs/final/nordschleife_candidate_v2_safe.json",
+      "launcher": "tools/start_nordschleife_v2_safe.ps1",
+      "verified_best_lap_s": 526.824546,
+      "verified_log": "logs/lmpc_nordschleife_v2_safe.csv",
+      "verified_max_speed_kmh": 293.817749,
+      "verified_tyres_out": 0,
+      "runtime_overrides": {
+        "line_target_clearance_m": 1.2,
+        "scaled_speed_max_lateral_g": 1.02,
+        "max_speed_kmh": 300.0,
+        "longitudinal_horizon": 50,
+        "longitudinal_dt_s": 0.05
+      },
+      "notes": [
+        "This is the safe candidate, not the final lap-time optimized version.",
+        "The lap is the first complete Nordschleife run with zero tyres out."
+      ]
+    }
+  }
+}

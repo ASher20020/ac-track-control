@@ -1,0 +1,278 @@
+\documentclass[9pt]{article}
+
+\usepackage[margin=1.28cm]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{setspace}
+
+\setlength{\parindent}{0pt}
+\setlength{\abovedisplayskip}{5pt}
+\setlength{\belowdisplayskip}{5pt}
+\setlength{\abovedisplayshortskip}{3pt}
+\setlength{\belowdisplayshortskip}{3pt}
+\setlength{\parskip}{2pt}
+
+\title{\vspace{-1.0cm}\textbf{Planning and MPC Equations}}
+\author{AC Track Control}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-0.5cm}
+\small
+\setstretch{0.96}
+
+\section{Reference-line optimization}
+
+The lateral offset field $o_i$ is optimized over a closed racing line while
+penalizing curvature, boundary violations, and non-smooth offsets:
+
+\begin{align}
+J_{\mathrm{line}}
+&= t_{\mathrm{lap}}
++ w_{\kappa}\sum_i \kappa_i^2\,\Delta s_i \nonumber\\
+&\quad
++ w_c\sum_i
+\max\!\left(0,\,c_{\mathrm{target}}-c_i\right)^2\Delta s_i
++ w_s\sum_i \left\|\Delta^2 o_i\right\|_2^2,
+\label{eq:line-cost}
+\end{align}
+
+where $t_{\mathrm{lap}}$ is the static lap-time proxy, $\kappa_i$ is the local
+curvature, $c_i$ is the distance from the racing line to the nearest track
+boundary, and $\Delta s_i$ is the segment length.
+
+\section{Speed envelope}
+
+The curvature-limited speed is
+
+\begin{equation}
+v_{\kappa,i}
+=
+\operatorname{clamp}\!\left(
+\sqrt{\frac{a_{\mathrm{lat}}}{|\kappa_i|}},
+\ v_{\min},
+\ v_{\max}
+\right).
+\label{eq:curvature-speed}
+\end{equation}
+
+The forward acceleration and backward braking passes enforce
+
+\begin{align}
+v_i^2 &\leq v_{i-1}^2 + 2a_x^{\mathrm{accel}}\Delta s_{i-1},
+\label{eq:forward-pass}\\
+v_i^2 &\leq v_{i+1}^2 + 2a_x^{\mathrm{brake}}\Delta s_i.
+\label{eq:backward-pass}
+\end{align}
+
+The high-speed planning response time is
+
+\begin{equation}
+\tau_{\mathrm{eff}}
+=
+\tau_0
++ \max\!\left(0,\,v-200\right)g_{\mathrm{hs}},
+\qquad
+v \text{ in km/h},
+\label{eq:high-speed-response}
+\end{equation}
+
+and the braking-limited speed satisfies
+
+\begin{equation}
+v_{\mathrm{allowed}}^2
+\leq
+v_{\mathrm{ahead}}^2
++ 2a_{\mathrm{brake}}d_{\mathrm{eff}},
+\qquad
+d_{\mathrm{eff}}
+=
+d-v\tau_{\mathrm{eff}}.
+\label{eq:braking-limit}
+\end{equation}
+
+\section{Lateral MPC}
+
+The Frenet state and control input are defined as
+
+\begin{equation}
+x=
+\begin{bmatrix}
+e_y & e_\psi & v_x & v_y & r
+\end{bmatrix}^{\!\top},
+\qquad
+u=
+\begin{bmatrix}
+\delta & a_x
+\end{bmatrix}^{\!\top}.
+\label{eq:lateral-state}
+\end{equation}
+
+The speed-scheduled continuous-time model is
+
+\begin{align}
+\dot e_y &= v_x e_\psi + v_y,
+\label{eq:frenet-ey}\\
+\dot e_\psi &= r,
+\label{eq:frenet-epsi}\\
+\dot v_x &= a_x,
+\label{eq:frenet-vx}\\
+\dot v_y &= a_{33}(v_x)v_y + a_{34}(v_x)r + b_{31}(v_x)\delta,
+\label{eq:frenet-vy}\\
+\dot r &= a_{43}(v_x)v_y + a_{44}(v_x)r + b_{41}(v_x)\delta.
+\label{eq:frenet-r}
+\end{align}
+
+The identified coefficients are scheduled by speed and augmented by the
+load-dependent yaw-response factor $\gamma(|a_y|)$:
+
+\begin{align}
+a_{33}(v_x) &= -\frac{c_{\mathrm{lat}}(v_x)}{v_x},
+&
+a_{34}(v_x) &= \frac{c_{\mathrm{yaw,lat}}(v_x)}{v_x}-v_x,
+\label{eq:identified-a1}\\
+a_{43}(v_x) &= \frac{c_{\mathrm{yaw,vel}}(v_x)}{v_x},
+&
+a_{44}(v_x) &= \frac{c_{\mathrm{yaw,damp}}(v_x)}{v_x}.
+\label{eq:identified-a2}
+\end{align}
+
+With the steering actuator state, the model is extended by
+
+\begin{equation}
+\dot\delta
+=
+\frac{\delta_{\mathrm{cmd}}-\delta}{\tau_{\mathrm{steer}}}.
+\label{eq:steer-actuator}
+\end{equation}
+
+For a horizon of $N$ stages, the LMPC cost is
+
+\begin{align}
+J_{\mathrm{lat}}
+&=
+\sum_{k=0}^{N-1}
+\left[
+\left(x_k-x_{\mathrm{ref},k}\right)^{\!\top}
+Q_k
+\left(x_k-x_{\mathrm{ref},k}\right)
++ u_k^{\!\top} R_k u_k
++ \Delta u_k^{\!\top} R_{d,k}\Delta u_k
+\right]
+\nonumber\\
+&\quad+
+\left(x_N-x_{\mathrm{ref},N}\right)^{\!\top}
+Q_N
+\left(x_N-x_{\mathrm{ref},N}\right),
+\label{eq:lateral-cost}
+\end{align}
+
+where
+
+\begin{equation}
+Q_k=
+\operatorname{diag}\!\left(
+q_y m_y(v_k),\,
+q_\psi m_\psi(v_k),\,
+q_{v_x},\,
+q_{v_y},\,
+q_r m_r(v_k)
+\right),
+\label{eq:lateral-q}
+\end{equation}
+
+and $m_y$, $m_\psi$, and $m_r$ are speed-dependent weight maps.
+
+\section{Longitudinal MPC}
+
+The response lag is discretized by
+
+\begin{equation}
+\alpha=\frac{\Delta t}{\tau_{\mathrm{response}}},
+\qquad 0\leq\alpha\leq 1.
+\label{eq:longitudinal-alpha}
+\end{equation}
+
+The incremental acceleration model is
+
+\begin{align}
+a_{k+1} &= (1-\alpha)a_k+\alpha u_k,
+\label{eq:longitudinal-accel}\\
+v_{k+1} &= v_k+\Delta t\left(a_{k+1}-a_{\mathrm{coast}}(v_k)\right).
+\label{eq:longitudinal-speed}
+\end{align}
+
+The longitudinal cost combines speed tracking, acceleration effort, and jerk:
+
+\begin{equation}
+J_{\mathrm{lon}}
+=
+\sum_{k=0}^{N-1}
+\left[
+q_v\left(v_k-v_{\mathrm{ref},k}\right)^2
++ q_a\left(a_k-a_{\mathrm{ref},k}\right)^2
++ r_a\Delta a_k^2
++ r_j\left(\Delta^2 a_k\right)^2
+\right].
+\label{eq:longitudinal-cost}
+\end{equation}
+
+The acceleration and jerk constraints are
+
+\begin{align}
+-a_{\mathrm{brake,max}}
+&\leq a_k \leq a_{\mathrm{accel,max}},
+\label{eq:longitudinal-accel-constraint}\\
+-j_{\mathrm{brake,max}}\Delta t
+&\leq \Delta a_k \leq
++j_{\mathrm{accel,max}}\Delta t.
+\label{eq:longitudinal-jerk-constraint}
+\end{align}
+
+\section{Pedal mapping}
+
+The acceleration request is converted to throttle by
+
+\begin{equation}
+T
+=
+\operatorname{clamp}\!\left(
+\frac{a_{\mathrm{propulsion}}}
+{a_{\mathrm{cap}}(v)},
+0,
+1
+\right),
+\label{eq:throttle-map}
+\end{equation}
+
+and to brake by interpolating the measured deceleration grid:
+
+\begin{equation}
+B
+=
+\mathcal{I}_{v,p}\!\left(a_{\mathrm{decel}}\right),
+\qquad
+p\in\{0,0.15,0.30,0.45,0.60,0.75,0.90,1.00\}.
+\label{eq:brake-map}
+\end{equation}
+
+\section{Steering calibration relation}
+
+The steady-state steering relation is
+
+\begin{equation}
+\frac{u v}{r}
+=
+\frac{L}{k}
++ \frac{K}{k}v^2,
+\label{eq:steering-calibration}
+\end{equation}
+
+where $L$ is the wheelbase, $k$ is the steering-axis scale, and $K$ is the
+understeer gradient. A linear least-squares fit of
+$u v/r$ against $v^2$ yields $L/k$ and $K/k$.
+
+\end{document}
