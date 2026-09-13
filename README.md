@@ -92,7 +92,6 @@ Read `docs/QUICKSTART.md` for the complete workflow.
 - [Technical report](docs/TECHNICAL_REPORT.md)
 - [Figure gallery](docs/FIGURES.md)
 - [Paper-style MPC equations](docs/assets/build/mpc_equations.pdf)
-- [Feishu-importable report XML](docs/feishu_report.xml)
 - [Quick start](docs/QUICKSTART.md)
 - [Verified results](docs/RESULTS.md)
 - [Real-car transfer](docs/REAL_CAR_TRANSFER.md)
