@@ -59,6 +59,12 @@ def _style_font() -> None:
     plt.rcParams["axes.unicode_minus"] = False
 
 
+def _format_lap_time(seconds: float) -> str:
+    minutes = int(seconds // 60)
+    remainder = seconds - minutes * 60
+    return f"{minutes}:{remainder:06.3f}"
+
+
 def _card(
     ax: plt.Axes,
     x: float,
@@ -401,8 +407,8 @@ def build_track_maps() -> None:
             "name": "Shanghai",
             "human_path": PROJECT_ROOT / "logs" / "vehicle_dynamics_reference_20min.csv",
             "auto_path": PROJECT_ROOT / "logs" / "lmpc_shanghai_v63_h50dt05_265_5lap.csv",
-            "human_label": "Human 136.248 s",
-            "auto_label": "Auto 143.543 s",
+            "human_label": f"Human {_format_lap_time(136.247968)}",
+            "auto_label": f"Auto {_format_lap_time(143.542842)}",
             "color": COLORS["blue"],
             "track_name": "tr_shanghai",
             "configuration": "advanced",
@@ -411,8 +417,8 @@ def build_track_maps() -> None:
             "name": "Zhejiang",
             "human_path": PROJECT_ROOT / "logs" / "manual_reference_v49_moza.csv",
             "auto_path": PROJECT_ROOT / "logs" / "lmpc_v59_rollback_5lap.csv",
-            "human_label": "Human 94.329 s",
-            "auto_label": "Auto 103.764 s",
+            "human_label": f"Human {_format_lap_time(94.328507)}",
+            "auto_label": f"Auto {_format_lap_time(103.764338)}",
             "color": COLORS["green"],
             "track_name": "st_zhejiang",
             "configuration": "layout_main",
@@ -422,7 +428,7 @@ def build_track_maps() -> None:
             "human_path": None,
             "auto_path": PROJECT_ROOT / "logs" / "lmpc_nordschleife_v2_safe.csv",
             "human_label": "",
-            "auto_label": "Auto 526.825 s",
+            "auto_label": f"Auto {_format_lap_time(526.824546)}",
             "color": COLORS["orange"],
             "track_name": "ks_nordschleife",
             "configuration": "nordschleife",
