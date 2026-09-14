@@ -79,8 +79,8 @@ long-horizon vehicle simulation.
 
 ![Longitudinal calibration maps](../assets/figures/longitudinal_maps.png)
 
-A single 3D surface shows the measured speed-by-pedal brake deceleration map
-used by the pedal mapper.
+A single 3D view combines the throttle acceleration surface and the measured
+brake deceleration surface, with signed acceleration separating the two modes.
 
 ## Weight scheduling
 

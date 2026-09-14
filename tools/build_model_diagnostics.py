@@ -7,7 +7,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from matplotlib.colors import TwoSlopeNorm
+from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Patch
 from scipy.interpolate import RegularGridInterpolator
 
 from actc.longitudinal import LongitudinalPedalConfig
@@ -635,64 +636,122 @@ def build_longitudinal_maps() -> dict[str, object]:
         dense_pedal,
         indexing="ij",
     )
-    deceleration_mesh = interpolator(
+    brake_deceleration_mesh = interpolator(
         np.column_stack((speed_mesh.ravel(), pedal_mesh.ravel()))
     ).reshape(speed_mesh.shape)
+    acceleration_capability_mesh = np.interp(
+        speed_mesh,
+        acceleration_speed,
+        acceleration_capability,
+    )
+    throttle_acceleration_mesh = (
+        pedal_mesh * acceleration_capability_mesh
+    )
     measured_speed_mesh, measured_pedal_mesh = np.meshgrid(
         brake_speed,
         brake_pedal,
         indexing="ij",
     )
+    _, measured_acceleration_pedal_mesh = np.meshgrid(
+        acceleration_speed,
+        np.asarray((1.0,)),
+        indexing="ij",
+    )
+
+    signed_max = float(
+        max(
+            np.max(throttle_acceleration_mesh),
+            np.max(brake_deceleration),
+        )
+    )
+    color_norm = TwoSlopeNorm(
+        vmin=-signed_max,
+        vcenter=0.0,
+        vmax=signed_max,
+    )
 
     fig = plt.figure(figsize=(14, 9), facecolor=COLORS["paper"])
     ax = fig.add_subplot(111, projection="3d")
     ax.set_facecolor(COLORS["white"])
-    surface = ax.plot_surface(
+    throttle_surface = ax.plot_surface(
         speed_mesh,
         pedal_mesh,
-        deceleration_mesh,
-        cmap="viridis",
+        throttle_acceleration_mesh,
+        cmap="coolwarm",
+        norm=color_norm,
         linewidth=0,
         antialiased=True,
-        alpha=0.94,
+        alpha=0.90,
+    )
+    brake_surface = ax.plot_surface(
+        speed_mesh,
+        pedal_mesh,
+        -brake_deceleration_mesh,
+        cmap="coolwarm",
+        norm=color_norm,
+        linewidth=0,
+        antialiased=True,
+        alpha=0.90,
     )
     ax.scatter(
         measured_speed_mesh.ravel(),
         measured_pedal_mesh.ravel(),
-        brake_deceleration.ravel(),
+        -brake_deceleration.ravel(),
         color=COLORS["white"],
         edgecolors=COLORS["ink"],
         linewidths=0.55,
         s=17,
         depthshade=False,
-        label="measured map points",
+    )
+    ax.scatter(
+        acceleration_speed,
+        measured_acceleration_pedal_mesh.ravel(),
+        acceleration_capability,
+        color=COLORS["white"],
+        edgecolors=COLORS["ink"],
+        linewidths=0.55,
+        s=21,
+        depthshade=False,
     )
     ax.set_xlabel("speed [km/h]", labelpad=12, fontsize=11)
-    ax.set_ylabel("brake pedal", labelpad=12, fontsize=11)
+    ax.set_ylabel("pedal", labelpad=12, fontsize=11)
     ax.set_zlabel(
-        r"deceleration [m/s$^2$]",
+        r"signed acceleration [m/s$^2$]",
         labelpad=12,
         fontsize=11,
     )
     ax.set_title(
-        "Speed x pedal -> measured brake deceleration",
+        "Throttle surface above zero, brake surface below zero",
         loc="left",
         pad=22,
         fontweight="bold",
     )
-    ax.view_init(elev=27, azim=-132)
-    ax.set_box_aspect((1.45, 1.0, 0.78))
-    ax.legend(frameon=False, loc="upper left")
+    ax.view_init(elev=25, azim=-132)
+    ax.set_box_aspect((1.45, 1.0, 0.88))
+    ax.legend(
+        handles=(
+            Patch(
+                facecolor=COLORS["red"],
+                label="throttle: +T a_cap(v)",
+            ),
+            Patch(
+                facecolor=COLORS["blue"],
+                label="brake: -deceleration map",
+            ),
+        ),
+        frameon=False,
+        loc="upper left",
+    )
     colorbar = fig.colorbar(
-        surface,
+        plt.cm.ScalarMappable(norm=color_norm, cmap="coolwarm"),
         ax=ax,
         shrink=0.68,
         pad=0.09,
         fraction=0.035,
     )
-    colorbar.set_label(r"deceleration [m/s$^2$]")
+    colorbar.set_label(r"signed acceleration [m/s$^2$]")
     fig.suptitle(
-        "Longitudinal brake calibration map",
+        "Longitudinal throttle and brake maps",
         x=0.055,
         y=0.975,
         ha="left",
@@ -703,9 +762,18 @@ def build_longitudinal_maps() -> dict[str, object]:
     fig.text(
         0.057,
         0.935,
-        "Single 3D view of the speed-by-pedal deceleration surface",
+        "Shared speed-pedal plane; brake and throttle modes are mutually exclusive",
         ha="left",
         fontsize=10.5,
+        color=COLORS["muted"],
+    )
+    fig.text(
+        0.057,
+        0.025,
+        "Mode hysteresis: brake enters below -0.50 m/s2 and exits above -0.15; "
+        "throttle enters above +0.15; the deadband uses coast with T = B = 0",
+        ha="left",
+        fontsize=9.5,
         color=COLORS["muted"],
     )
     fig.savefig(FIGURE_DIR / "longitudinal_maps.png", dpi=180)
