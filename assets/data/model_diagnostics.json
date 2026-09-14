@@ -402,14 +402,6 @@
       ]
     }
   },
-  "pedal_mapping_pipeline": {
-    "formula": "a_prop = a_cmd + max(0, a_coast(v)); T = clamp(a_prop/a_cap(v), 0, 1) for propulsion; B = inverse_brake_map(v, -a_prop) for braking",
-    "limits": [
-      "throttle and brake rate limits",
-      "steering and rear-slip throttle derating",
-      "throttle/brake mutual exclusion"
-    ]
-  },
   "coupled_speed_planning": {
     "coupling": [
       "curvature and grip cap the speed envelope",
@@ -417,22 +409,6 @@
       "lateral load and steering scale the braking capability and MPC effort",
       "longitudinal MPC generates acceleration; pedal map applies rate and slip limits",
       "vehicle speed and lateral acceleration feed back to the next planning cycle"
-    ]
-  },
-  "model_construction": {
-    "lateral": [
-      "nonlinear dynamic bicycle equation",
-      "linear tire force approximation and small-angle Frenet errors",
-      "continuous A_c(vx), B_c(vx)",
-      "steering actuator augmentation",
-      "discrete condensed QP"
-    ],
-    "longitudinal": [
-      "coast-down nonlinear speed equation",
-      "first-order acceleration response",
-      "forward Euler discretization",
-      "speed prediction",
-      "acceleration and jerk constrained QP"
     ]
   }
 }

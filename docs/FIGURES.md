@@ -63,11 +63,8 @@ is `docs/assets/build/mpc_equations.pdf`.
 
 ## Model construction
 
-![Model construction](../assets/figures/model_construction.png)
-
-The lateral and longitudinal controllers start from nonlinear equations, apply
-the relevant tire or actuator approximation, discretize the model, and only
-then assemble the real-time condensed QP.
+The model-construction and controller flowcharts are embedded as editable
+Chinese Mermaid diagrams in `docs/TECHNICAL_REPORT.md`.
 
 ## Model replay validation
 
@@ -84,14 +81,6 @@ long-horizon vehicle simulation.
 
 A single 3D surface shows the measured speed-by-pedal brake deceleration map
 used by the pedal mapper.
-
-## Pedal mapping pipeline
-
-![Pedal mapping pipeline](../assets/figures/pedal_mapping_pipeline.png)
-
-The diagram traces the full execution path from MPC acceleration through
-road-load compensation, mode hysteresis, throttle and brake maps, actuator
-limits and finally the virtual-controller outputs.
 
 ## Weight scheduling
 

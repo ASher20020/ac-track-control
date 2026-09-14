@@ -1373,9 +1373,7 @@ def main() -> int:
         "model_identification": build_model_identification(),
         "model_replay_comparison": build_model_replay_comparison(),
         "longitudinal_maps": build_longitudinal_maps(),
-        "pedal_mapping_pipeline": build_pedal_mapping_pipeline(),
         "coupled_speed_planning": build_coupled_speed_planning(),
-        "model_construction": build_model_construction(),
     }
     output = DATA_DIR / "model_diagnostics.json"
     output.write_text(
@@ -1389,9 +1387,7 @@ def main() -> int:
             "model_identification.png",
             "model_replay_comparison.png",
             "longitudinal_maps.png",
-            "pedal_mapping_pipeline.png",
             "coupled_speed_planning.png",
-            "model_construction.png",
         }:
             print(path.relative_to(PROJECT_ROOT))
     print(output.relative_to(PROJECT_ROOT))

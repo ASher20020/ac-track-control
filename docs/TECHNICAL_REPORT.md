@@ -282,11 +282,22 @@ $$
 
 ## 4. 模型构建、辨识与验证
 
-![From nonlinear vehicle equations to real-time QP models](../assets/figures/model_construction.png)
-
 控制器需要先有一个能在 20 ms 控制周期内求解的车辆模型。本章按固定顺序处理：
 非线性车辆方程、轮胎近似、速度带辨识、转向执行器增广、纵向能力标定和回放验证。
 横向 LMPC 与纵向 MPC 只消费这里得到的模型，不再重复建模。
+
+```mermaid
+flowchart LR
+    A["输入数据<br/>归一化转向轴与车辆状态"] --> B["数据清洗<br/>低滑移、在界内、抓地力正常"]
+    B --> C["非线性自行车模型<br/>轮胎侧偏角近似"]
+    C --> D["横向速度带辨识<br/>c_lat、c_yaw、b_lat、b_yaw"]
+    D --> E["转向执行器增广<br/>转向状态与一阶滞后"]
+    E --> F["离散状态矩阵<br/>A_d、B_d 缓存"]
+    D --> G["纵向能力标定<br/>油门 MAP、刹车 MAP、滑行阻力"]
+    G --> H["回放验证<br/>实测与单步预测"]
+    F --> I["供横向 LMPC 使用"]
+    H --> I
+```
 
 ### 4.1 输入量、状态量与数据清洗
 
@@ -604,13 +615,24 @@ $$
 
 ## 5. 横向 LMPC
 
+```mermaid
+flowchart LR
+    A["Frenet 投影<br/>e_y、e_psi"] --> B["参考序列<br/>v_ref、r_ref = v_x kappa"]
+    B --> C["速度调度模型<br/>A_d(v_x)、B_d(v_x)"]
+    C --> D["组装 condensed QP"]
+    D --> E{"QP 求解成功?"}
+    E -->|"是"| F["得到转向命令"]
+    E -->|"否"| G["保持上一帧命令"]
+    F --> H["滤波、超前、滞后<br/>速率与 jerk 限制"]
+    H --> I["输出虚拟手柄转向"]
+    G --> I
+```
+
 ![MPC equations, page 1](../assets/figures/mpc_equations_page-1.png)
 
 ![MPC equations, page 2](../assets/figures/mpc_equations_page-2.png)
 
 ![Linear model matrices](../assets/figures/mpc_equations_page-3.png)
-
-![From nonlinear vehicle equations to real-time QP models](../assets/figures/model_construction.png)
 
 ### 5.1 Frenet 状态与横向跟踪
 
@@ -772,6 +794,21 @@ rd_accel = 8
 
 ## 6. 纵向 MPC与踏板映射
 
+```mermaid
+flowchart LR
+    A["MPC 目标加速度<br/>a_cmd"] --> B["滑行阻力补偿<br/>a_prop = a_cmd + a_coast"]
+    B --> C{"踏板模式滞回"}
+    C -->|"强减速"| D["刹车模式"]
+    C -->|"小幅正加速度"| E["油门模式"]
+    C -->|"中间死区"| F["滑行模式<br/>T = 0, B = 0"]
+    D --> G["反查刹车 MAP<br/>B = I(v, -a_prop)"]
+    E --> H["油门能力归一化<br/>T = a_prop / a_cap(v)"]
+    G --> I["速率、转向、滑移限制<br/>油门刹车互斥"]
+    H --> I
+    F --> I
+    I --> J["输出虚拟手柄<br/>油门与刹车"]
+```
+
 ### 6.1 纵向预测模型
 
 纵向模型已经在 4.5 节辨识完成。MPC 直接使用状态
@@ -863,8 +900,6 @@ $$
 
 MPC 输出的是目标加速度 $a_{\mathrm{cmd}}$，踏板映射器负责把它变成虚拟手柄的
 油门 $T$ 和刹车 $B$。映射前先补偿滑行阻力：
-
-![Pedal mapping pipeline](../assets/figures/pedal_mapping_pipeline.png)
 
 $$
 a_{\mathrm{prop}}
