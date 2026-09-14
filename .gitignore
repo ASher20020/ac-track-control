@@ -20,3 +20,6 @@ docs/assets/build/*.fls
 docs/assets/build/*.fdb_latexmk
 docs/assets/build/*.synctex.gz
 tools/Nefarius.ViGEm.Client.dll
+
+configs/lmpc_*.json
+configs/tr_*.json

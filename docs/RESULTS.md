@@ -19,7 +19,8 @@ number has a corresponding source path in `configs/final/manifest.json`.
 The fastest verified automatic lap is `143.542842 s`, obtained with:
 
 - `lmpc_shanghai_v63_h50dt05_265_5lap.csv`
-- `configs/lmpc_shanghai_v63_h50dt05_265.json`
+- Historical verification config `lmpc_shanghai_v63_h50dt05_265.json`
+  (not distributed; the public final config is in `configs/final/`)
 - 265 km/h maximum speed
 - Longitudinal MPC horizon `50 x 0.05 s`
 
@@ -49,6 +50,8 @@ The Shanghai human-versus-auto comparison shows:
 
 The verified automatic lap is `103.764338 s` with V59:
 
+- Historical verification config `lmpc_zhejiang_manual_v59_microspeed.json`
+  (not distributed; the public final config is in `configs/final/`)
 - `lmpc_v59_rollback_5lap.csv`
 - Four complete laps between `103.764 s` and `103.791 s`
 - Maximum speed `229.2 km/h`
