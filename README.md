@@ -1,18 +1,34 @@
 # AC Track Control
 
-Assetto Corsa 中的赛车自动驾驶规划与控制闭环。项目从 AC 标准共享内存读取车辆状态，通过虚拟手柄输出转向、油门和刹车，并运行横向线性 MPC、纵向加速度 MPC、赛车线优化和速度包络规划。
+<p align="center">
+  <img src="assets/figures/hero_drive.gif" alt="Assetto Corsa closed-loop autonomous driving" width="960">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Windows-0078D4?style=for-the-badge" alt="Windows">
+  <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&amp;logo=python&amp;logoColor=white" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/Control-50%20Hz-25896D?style=for-the-badge" alt="50 Hz control">
+  <img src="https://img.shields.io/badge/Lateral-LMPC-2166D5?style=for-the-badge" alt="Lateral LMPC">
+  <img src="https://img.shields.io/badge/Longitudinal-MPC-E17A2D?style=for-the-badge" alt="Longitudinal MPC">
+</p>
+
+<p align="center">
+  <b>Assetto Corsa 赛车自动驾驶规划与控制闭环</b><br>
+  共享内存遥测、Frenet 路径跟踪、横向 LMPC、纵向加速度 MPC、赛车线优化与速度包络规划
+</p>
 
 项目目标不是做一个“键盘自动驾驶 demo”，而是把赛车自动驾驶中真正需要打通的环节做成可复用工程：实时状态接口、模型辨识、速度与制动标定、路径规划、MPC 控制、日志复盘和赛道结果验证。
 
-![AC Track Control overview](assets/figures/hero_overview.png)
-
-## Visual overview
-
-![Closed-loop architecture](assets/figures/closed_loop_architecture.png)
-
-![Track trajectories](assets/figures/track_maps.png)
-
 ## Verified results
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Shanghai-2%3A23.543-2166D5?style=flat-square" alt="Shanghai 2:23.543">
+  <img src="https://img.shields.io/badge/Zhejiang-1%3A43.764-25896D?style=flat-square" alt="Zhejiang 1:43.764">
+  <img src="https://img.shields.io/badge/Nordschleife-8%3A46.825-C44B3D?style=flat-square" alt="Nordschleife 8:46.825">
+  <img src="https://img.shields.io/badge/Shanghai%20tyres%20out-0-6B7280?style=flat-square" alt="Shanghai tyres out 0">
+  <img src="https://img.shields.io/badge/Zhejiang%20tyres%20out-2-E17A2D?style=flat-square" alt="Zhejiang tyres out 2">
+  <img src="https://img.shields.io/badge/Nordschleife%20tyres%20out-0-6B7280?style=flat-square" alt="Nordschleife tyres out 0">
+</p>
 
 | Track | Human | Auto | Gap | Auto max speed | Tyres out | Status |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
@@ -28,6 +44,14 @@ The V64 Shanghai configuration and the synchronized Zhejiang configuration are
 the frozen deployment candidates. The lap-time evidence above comes from the
 corresponding verified baselines; see `configs/final/manifest.json` for the
 exact mapping.
+
+## Visual overview
+
+![Closed-loop architecture](assets/figures/closed_loop_architecture.png)
+
+![Track trajectories](assets/figures/track_maps.png)
+
+![AC Track Control overview](assets/figures/hero_overview.png)
 
 ## What is implemented
 

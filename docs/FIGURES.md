@@ -4,6 +4,13 @@ All public figures are generated from project code or measured CSV logs. The
 raw logs are excluded from the public repository, but the final metrics and
 source mapping remain in `configs/final/manifest.json`.
 
+## Homepage drive loop
+
+![Homepage drive loop](../assets/figures/hero_drive.gif)
+
+Five-second Shanghai third-person replay loop used at the top of the README.
+The static cover frame is stored in `assets/figures/hero_drive_cover.png`.
+
 ## Project cover
 
 ![Project cover](../assets/figures/hero_overview.png)
