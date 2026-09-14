@@ -8,22 +8,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
+from tools.figure_theme import THEME, apply_dark_theme
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FIGURE_DIR = PROJECT_ROOT / "assets" / "figures"
 
-COLORS = {
-    "ink": "#172033",
-    "muted": "#667085",
-    "grid": "#D7DDE7",
-    "blue": "#2563EB",
-    "cyan": "#0891B2",
-    "green": "#16836B",
-    "orange": "#D97706",
-    "red": "#C2413B",
-    "paper": "#F7F8FA",
-    "white": "#FFFFFF",
-}
+COLORS = THEME
 
 
 def _add_box(
@@ -348,7 +339,7 @@ def build_architecture() -> None:
         "Assetto Corsa vehicle",
         "tyre, suspension, aero and track physics",
         edge=COLORS["orange"],
-        fill="#FFF8E7",
+        fill=COLORS["panel"],
     )
     _draw_car_icon(ax, 11.05, 1.35, COLORS["orange"])
     _draw_monitor_icon(ax, 12.95, 1.35, COLORS["orange"])
@@ -691,12 +682,7 @@ def build_nordschleife_profile() -> None:
 
 def main() -> int:
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    plt.rcParams["font.sans-serif"] = [
-        "Microsoft YaHei",
-        "SimHei",
-        "DejaVu Sans",
-    ]
-    plt.rcParams["axes.unicode_minus"] = False
+    apply_dark_theme()
     build_architecture()
     build_control_stack()
     build_track_results()

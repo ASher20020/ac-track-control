@@ -638,12 +638,6 @@ flowchart LR
     G --> I
 ```
 
-![MPC equations, page 1](../assets/figures/mpc_equations_page-1.png)
-
-![MPC equations, page 2](../assets/figures/mpc_equations_page-2.png)
-
-![Linear model matrices](../assets/figures/mpc_equations_page-3.png)
-
 ### 5.1 Frenet 状态与横向跟踪
 
 车辆被投影到参考路径的 Frenet 坐标系，状态定义为：

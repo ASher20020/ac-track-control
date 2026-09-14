@@ -16,26 +16,13 @@ from tools.build_comparison_figures import (
     find_auto_fastest_lap,
     find_manual_fastest_lap,
 )
+from tools.figure_theme import THEME, apply_dark_theme
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FIGURE_DIR = PROJECT_ROOT / "assets" / "figures"
 
-COLORS = {
-    "ink": "#132238",
-    "muted": "#60708A",
-    "grid": "#D8E0EA",
-    "paper": "#F3F6F8",
-    "white": "#FFFFFF",
-    "blue": "#2166D5",
-    "cyan": "#0E9AA7",
-    "green": "#25896D",
-    "orange": "#E17A2D",
-    "red": "#C44B3D",
-    "navy": "#0A1726",
-    "navy_2": "#10263A",
-    "cream": "#F8F4EA",
-}
+COLORS = THEME
 
 SPEED_CMAP = LinearSegmentedColormap.from_list(
     "speed",
@@ -50,13 +37,7 @@ SPEED_CMAP = LinearSegmentedColormap.from_list(
 
 
 def _style_font() -> None:
-    plt.rcParams["font.sans-serif"] = [
-        "Microsoft YaHei",
-        "Bahnschrift",
-        "Segoe UI",
-        "DejaVu Sans",
-    ]
-    plt.rcParams["axes.unicode_minus"] = False
+    apply_dark_theme()
 
 
 def _format_lap_time(seconds: float) -> str:
@@ -291,7 +272,7 @@ def build_hero() -> None:
         "AC TRACK CONTROL",
         fontsize=29,
         fontweight="bold",
-        color=COLORS["white"],
+        color=COLORS["ink"],
     )
     ax.text(
         0.82,
@@ -330,7 +311,7 @@ def build_hero() -> None:
             x + 0.20,
             5.49,
             value,
-            color=COLORS["white"],
+            color=COLORS["ink"],
             fontsize=15,
             fontweight="bold",
         )
@@ -385,7 +366,7 @@ def build_hero() -> None:
         [map_points[0, 0]],
         [map_points[0, 1]],
         s=90,
-        color=COLORS["white"],
+        color=COLORS["ink"],
         edgecolor=COLORS["orange"],
         linewidth=2.0,
         zorder=5,
@@ -394,7 +375,7 @@ def build_hero() -> None:
         map_points[0, 0] + 0.03,
         map_points[0, 1] + 0.03,
         "START / FINISH",
-        color=COLORS["white"],
+        color=COLORS["ink"],
         fontsize=8.5,
         fontweight="bold",
         zorder=6,
@@ -536,7 +517,7 @@ def build_track_maps() -> None:
             [auto_points[0, 0]],
             [auto_points[0, 1]],
             s=46,
-            color=COLORS["white"],
+            color=COLORS["ink"],
             edgecolor=spec["color"],
             linewidth=1.8,
             zorder=5,

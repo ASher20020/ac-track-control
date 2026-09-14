@@ -12,6 +12,7 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Patch
 from scipy.interpolate import RegularGridInterpolator
 
 from actc.longitudinal import LongitudinalPedalConfig
+from tools.figure_theme import THEME, apply_dark_theme
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -30,27 +31,11 @@ CONFIG_PATH = (
     / "shanghai_final.json"
 )
 
-COLORS = {
-    "ink": "#132238",
-    "muted": "#60708A",
-    "grid": "#D8E0EA",
-    "paper": "#F3F6F8",
-    "white": "#FFFFFF",
-    "blue": "#2166D5",
-    "cyan": "#0E9AA7",
-    "green": "#25896D",
-    "orange": "#E17A2D",
-    "red": "#C44B3D",
-}
+COLORS = THEME
 
 
 def _style() -> None:
-    plt.rcParams["font.sans-serif"] = [
-        "Microsoft YaHei",
-        "Segoe UI",
-        "DejaVu Sans",
-    ]
-    plt.rcParams["axes.unicode_minus"] = False
+    apply_dark_theme()
 
 
 def _interp(x: np.ndarray, points: list[float], values: list[float]) -> np.ndarray:
@@ -673,6 +658,12 @@ def build_longitudinal_maps() -> dict[str, object]:
     fig = plt.figure(figsize=(14, 9), facecolor=COLORS["paper"])
     ax = fig.add_subplot(111, projection="3d")
     ax.set_facecolor(COLORS["white"])
+    for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+        axis.label.set_color(COLORS["ink"])
+        axis.line.set_color(COLORS["border"])
+        axis.pane.set_facecolor(COLORS["panel"])
+        axis.pane.set_edgecolor(COLORS["border"])
+    ax.tick_params(colors=COLORS["muted"])
     throttle_surface = ax.plot_surface(
         speed_mesh,
         pedal_mesh,
