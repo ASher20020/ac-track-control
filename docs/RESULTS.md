@@ -10,7 +10,7 @@ number has a corresponding source path in `configs/final/manifest.json`.
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Shanghai | 136.248 s | 143.543 s | +7.295 s | 268.7 km/h | 0 | V63 verification baseline; V64 final candidate retained |
 | Zhejiang | 94.329 s | 103.764 s | +9.436 s | 229.2 km/h | 2 | V59 speed strategy with Shanghai longitudinal MPC parameters |
-| Nordschleife | - | 526.825 s | - | 293.8 km/h | 0 | V2 safe candidate, one complete lap |
+| Nordschleife | 7:17.632 | 8:46.825 | +1:29.193 | 293.8 km/h | 0 | V2 safe candidate, one complete lap |
 
 ![Verified results](../assets/figures/track_results.png)
 
@@ -77,7 +77,9 @@ The Zhejiang comparison shows:
 The V2 safe candidate completed the first full Nordschleife lap without any
 tyre leaving the track:
 
+- Human reference lap: `437.632 s`, about `7:17.632`
 - Lap time: `526.824546 s`, about `8:46.82`
+- Gap to human: `89.193 s`, about `1:29.193`
 - Maximum speed: `293.8 km/h`
 - p95 lateral error: `0.461 m`
 - Maximum lateral error: `1.877 m`

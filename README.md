@@ -18,7 +18,7 @@ Assetto Corsa 中的赛车自动驾驶规划与控制闭环。项目从 AC 标�
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | Shanghai | 136.248 s | 143.543 s | +7.295 s | 268.7 km/h | 0 | V63 verified; V64 final candidate |
 | Zhejiang | 94.329 s | 103.764 s | +9.436 s | 229.2 km/h | 2 | V59 speed strategy; Shanghai longitudinal MPC synchronized |
-| Nordschleife | - | 526.825 s | - | 293.8 km/h | 0 | V2 safe candidate |
+| Nordschleife | 7:17.632 | 8:46.825 | +1:29.193 | 293.8 km/h | 0 | V2 safe candidate |
 
 ![Track results](assets/figures/track_results.png)
 

@@ -551,9 +551,9 @@ $$
 
 | Item | Value |
 | --- | ---: |
-| Human | 136.248 s |
-| Auto | 143.543 s |
-| Gap | +7.295 s |
+| Human | 2:16.248 |
+| Auto | 2:23.543 |
+| Gap | +0:07.295 |
 | Auto max speed | 268.7 km/h |
 | p95 lateral error | 0.566 m |
 | Tyres out | 0 |
@@ -570,9 +570,9 @@ $$
 
 | Item | Value |
 | --- | ---: |
-| Human | 94.329 s |
-| Auto | 103.764 s |
-| Gap | +9.436 s |
+| Human | 1:34.329 |
+| Auto | 1:43.764 |
+| Gap | +0:09.436 |
 | Auto max speed | 229.2 km/h |
 | p95 lateral error | 0.535 m |
 | Tyres out | 2 |
@@ -587,7 +587,9 @@ V2 safe 版本第一次完整跑完纽北：
 
 | Item | Value |
 | --- | ---: |
-| Lap time | 526.825 s |
+| Human reference lap | 7:17.632 |
+| Automatic lap | 8:46.825 |
+| Gap | +1:29.193 |
 | Max speed | 293.8 km/h |
 | Mean speed | 143.6 km/h |
 | p95 lateral error | 0.461 m |

@@ -35,7 +35,9 @@
       "final_candidate": "configs/final/zhejiang_final.json"
     },
     "nordschleife": {
+      "human_lap_s": 437.632,
       "auto_lap_s": 526.824546,
+      "gap_s": 89.192546,
       "auto_max_speed_kmh": 293.817749,
       "auto_p95_lateral_error_m": 0.461,
       "tyres_out": 0,

@@ -334,14 +334,14 @@ def build_hero() -> None:
     ax.text(
         0.82,
         2.58,
-        "Fastest verified automatic lap",
+        "Nordschleife lap time",
         fontsize=11,
         color="#8BA9BB",
     )
     ax.text(
         0.82,
         2.04,
-        "8:46.82",
+        "Auto 8:46.825",
         fontsize=31,
         fontweight="bold",
         color="#F1A24B",
@@ -349,7 +349,7 @@ def build_hero() -> None:
     ax.text(
         0.85,
         1.58,
-        "Nordschleife V2 safe  |  0 tyres out  |  20.66 km",
+        "Human 7:17.632  |  Gap +1:29.193  |  0 tyres out",
         fontsize=10.5,
         color="#C1D6E1",
     )
@@ -427,7 +427,7 @@ def build_track_maps() -> None:
             "name": "Nordschleife",
             "human_path": None,
             "auto_path": PROJECT_ROOT / "logs" / "lmpc_nordschleife_v2_safe.csv",
-            "human_label": "",
+            "human_label": f"Human {_format_lap_time(437.632)}",
             "auto_label": f"Auto {_format_lap_time(526.824546)}",
             "color": COLORS["orange"],
             "track_name": "ks_nordschleife",
@@ -486,6 +486,7 @@ def build_track_maps() -> None:
                 alpha=0.85,
                 zorder=1,
             )
+        if spec["human_label"]:
             ax.text(
                 0.0,
                 -0.075,

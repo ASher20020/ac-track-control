@@ -374,7 +374,8 @@ def build_track_results() -> None:
             "name": "Shanghai",
             "length": "5.43 km",
             "lap": 143.542842,
-            "label": "2:23.54",
+            "label": "2:23.543",
+            "human": "2:16.248",
             "status": "V63 verified; V64 final candidate",
             "max_speed": 268.726,
             "lat": 0.566,
@@ -385,7 +386,8 @@ def build_track_results() -> None:
             "name": "Zhejiang",
             "length": "3.11 km",
             "lap": 103.764338,
-            "label": "1:43.76",
+            "label": "1:43.764",
+            "human": "1:34.329",
             "status": "4 complete laps; 2 tyres out",
             "max_speed": 229.152,
             "lat": 0.530,
@@ -396,7 +398,8 @@ def build_track_results() -> None:
             "name": "Nordschleife",
             "length": "20.66 km",
             "lap": 526.824546,
-            "label": "8:46.82",
+            "label": "8:46.825",
+            "human": "7:17.632",
             "status": "1 complete lap; zero tyres out",
             "max_speed": 293.8,
             "lat": 0.461,
@@ -427,6 +430,7 @@ def build_track_results() -> None:
         ax.text(0.1, 0.54, "best recorded lap", fontsize=10, color=COLORS["muted"])
         ax.plot([0.1, 0.9], [0.48, 0.48], color=COLORS["grid"], linewidth=1)
         rows = [
+            ("Human reference", item["human"]),
             ("Max speed", f"{item['max_speed']:.1f} km/h"),
             ("p95 lateral", f"{item['lat']:.3f} m"),
             ("Tyres out", str(item["tyres"])),
