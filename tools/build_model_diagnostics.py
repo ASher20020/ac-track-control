@@ -354,6 +354,243 @@ def build_model_identification() -> dict[str, object]:
     }
 
 
+def _replay_r2(measured: np.ndarray, predicted: np.ndarray) -> float:
+    residual = float(np.sum((predicted - measured) ** 2))
+    total = float(np.sum((measured - float(np.mean(measured))) ** 2))
+    return 1.0 - residual / max(total, 1e-12)
+
+
+def _select_replay_windows(
+    replay: dict[str, np.ndarray],
+) -> list[dict[str, object]]:
+    time_s = replay["time_s"]
+    speed_kmh = replay["speed_kmh"]
+    ay_true = replay["ay_true"]
+    yaw_accel_true = replay["yaw_accel_true"]
+    ay_predicted = replay["ay_predicted"]
+    yaw_accel_predicted = replay["yaw_accel_predicted"]
+    valid = replay["valid"]
+    segments: list[dict[str, object]] = []
+    for name, lower_kmh, upper_kmh in (
+        ("Replay A", 55.0, 85.0),
+        ("Replay B", 105.0, 135.0),
+    ):
+        candidates: list[tuple[float, int, int, float, float]] = []
+        for start in range(0, len(time_s) - 1, 25):
+            end = int(
+                np.searchsorted(time_s, time_s[start] + 10.0)
+            )
+            if end <= start + 100:
+                continue
+            if float(np.mean(valid[start:end])) < 0.90:
+                continue
+            median_speed = float(np.median(speed_kmh[start:end]))
+            if not (lower_kmh <= median_speed < upper_kmh):
+                continue
+            if (
+                float(np.std(ay_true[start:end])) < 0.5
+                or float(np.std(replay["steer"][start:end])) < 0.03
+            ):
+                continue
+            lateral_r2 = _replay_r2(
+                ay_true[start:end],
+                ay_predicted[start:end],
+            )
+            yaw_r2 = _replay_r2(
+                yaw_accel_true[start:end],
+                yaw_accel_predicted[start:end],
+            )
+            score = 0.5 * (lateral_r2 + yaw_r2)
+            candidates.append(
+                (score, start, end, lateral_r2, yaw_r2)
+            )
+        if not candidates:
+            raise RuntimeError(f"No replay window found for {name}.")
+        _score, start, end, lateral_r2, yaw_r2 = max(candidates)
+        segments.append(
+            {
+                "name": name,
+                "start_index": start,
+                "end_index": end,
+                "start_time_s": float(time_s[start]),
+                "end_time_s": float(time_s[end - 1]),
+                "median_speed_kmh": float(
+                    np.median(speed_kmh[start:end])
+                ),
+                "lateral_r2": lateral_r2,
+                "yaw_r2": yaw_r2,
+            }
+        )
+    return segments
+
+
+def build_model_replay_comparison() -> dict[str, object]:
+    log_path = (
+        PROJECT_ROOT
+        / "logs"
+        / "vehicle_dynamics_reference_20min.csv"
+    )
+    model = json.loads(
+        MODEL_PATH.read_text(encoding="utf-8")
+    )["model"]
+    frame = pd.read_csv(log_path)
+    time_s = frame["timestamp"].to_numpy(dtype=float)
+    time_s = time_s - time_s[0]
+    speed_kmh = frame["speed_kmh"].to_numpy(dtype=float)
+    vx = np.maximum(
+        frame["local_velocity_z"].to_numpy(dtype=float),
+        3.0,
+    )
+    vy = -frame["local_velocity_x"].to_numpy(dtype=float)
+    yaw_rate = -frame["yaw_rate_rad_s"].to_numpy(dtype=float)
+    steer = frame["steer"].to_numpy(dtype=float)
+    vy_dot = np.gradient(vy, time_s)
+    yaw_accel = np.gradient(yaw_rate, time_s)
+    ay_true = vy_dot + vx * yaw_rate
+    map_speeds = model["direct_model_map_kmh"]
+    c_lat = _interp(
+        speed_kmh,
+        map_speeds,
+        model["lateral_velocity_damping_map"],
+    )
+    c_lat_yaw = _interp(
+        speed_kmh,
+        map_speeds,
+        model["lateral_yaw_coupling_map"],
+    )
+    c_yaw_vel = _interp(
+        speed_kmh,
+        map_speeds,
+        model["yaw_velocity_coupling_map"],
+    )
+    c_yaw_damp = _interp(
+        speed_kmh,
+        map_speeds,
+        model["yaw_rate_damping_map"],
+    )
+    b_lat = _interp(
+        speed_kmh,
+        model["steer_lateral_gain_map_kmh"],
+        model["steer_lateral_gain_map"],
+    )
+    b_yaw = _interp(
+        speed_kmh,
+        model["steer_yaw_gain_map_kmh"],
+        model["steer_yaw_gain_map"],
+    )
+    ay_predicted = (
+        c_lat * (-vy / vx)
+        + c_lat_yaw * (yaw_rate / vx)
+        + b_lat * steer
+    )
+    yaw_accel_predicted = (
+        c_yaw_vel * (vy / vx)
+        + c_yaw_damp * (yaw_rate / vx)
+        + b_yaw * steer
+    )
+    valid = (
+        (frame["tyres_out"].to_numpy(dtype=float) == 0.0)
+        & (frame["surface_grip"].to_numpy(dtype=float) >= 0.90)
+        & (frame["wheel_slip_abs_max"].to_numpy(dtype=float) < 0.25)
+        & (speed_kmh >= 40.0)
+        & (speed_kmh <= 190.0)
+        & (vx > 5.0)
+    )
+    replay = {
+        "time_s": time_s,
+        "speed_kmh": speed_kmh,
+        "steer": steer,
+        "ay_true": ay_true,
+        "ay_predicted": ay_predicted,
+        "yaw_accel_true": yaw_accel,
+        "yaw_accel_predicted": yaw_accel_predicted,
+        "valid": valid,
+    }
+    segments = _select_replay_windows(replay)
+
+    fig, axes = plt.subplots(
+        2,
+        2,
+        figsize=(16, 9),
+        facecolor=COLORS["paper"],
+    )
+    for row, segment in enumerate(segments):
+        start = int(segment["start_index"])
+        end = int(segment["end_index"])
+        segment_time = time_s[start:end] - time_s[start]
+        for column, (true_key, predicted_key, ylabel) in enumerate(
+            (
+                (
+                    "ay_true",
+                    "ay_predicted",
+                    r"body lateral acceleration [m/s$^2$]",
+                ),
+                (
+                    "yaw_accel_true",
+                    "yaw_accel_predicted",
+                    r"yaw acceleration [rad/s$^2$]",
+                ),
+            )
+        ):
+            ax = axes[row, column]
+            ax.plot(
+                segment_time,
+                replay[true_key][start:end],
+                color=COLORS["blue"],
+                linewidth=1.7,
+                label="measured",
+            )
+            ax.plot(
+                segment_time,
+                replay[predicted_key][start:end],
+                color=COLORS["orange"],
+                linewidth=1.5,
+                linestyle="--",
+                label="model",
+            )
+            r2_key = "lateral_r2" if column == 0 else "yaw_r2"
+            ax.set_title(
+                f"{segment['name']}: "
+                f"{segment['median_speed_kmh']:.0f} km/h, "
+                rf"$R^2={segment[r2_key]:.3f}$",
+                loc="left",
+                fontweight="bold",
+            )
+            ax.set_xlabel("replay time [s]")
+            ax.set_ylabel(ylabel)
+            ax.set_facecolor(COLORS["white"])
+            ax.grid(color=COLORS["grid"], alpha=0.75)
+            ax.set_axisbelow(True)
+            if row == 0 and column == 0:
+                ax.legend(frameon=False, loc="best")
+
+    fig.suptitle(
+        "Lateral identification replay validation",
+        x=0.055,
+        y=0.98,
+        ha="left",
+        fontsize=21,
+        fontweight="bold",
+        color=COLORS["ink"],
+    )
+    fig.text(
+        0.057,
+        0.935,
+        "One-step model prediction from measured states and steering input",
+        ha="left",
+        fontsize=10.5,
+        color=COLORS["muted"],
+    )
+    fig.tight_layout(rect=(0, 0, 1, 0.91))
+    fig.savefig(FIGURE_DIR / "model_replay_comparison.png", dpi=180)
+    plt.close(fig)
+    return {
+        "source": str(log_path.relative_to(PROJECT_ROOT)),
+        "prediction": "one-step response from measured states",
+        "segments": segments,
+    }
+
+
 def _load_steering_samples(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     frame = pd.read_csv(path)
     speed = pd.to_numeric(frame["speed_kmh"], errors="coerce")
@@ -877,7 +1114,7 @@ def main() -> int:
     diagnostics = {
         "weight_schedules": build_weight_schedules(),
         "model_identification": build_model_identification(),
-        "steering_calibration": build_steering_calibration(),
+        "model_replay_comparison": build_model_replay_comparison(),
         "coupled_speed_planning": build_coupled_speed_planning(),
         "model_construction": build_model_construction(),
     }
@@ -890,7 +1127,7 @@ def main() -> int:
         if path.name in {
             "weight_schedules.png",
             "model_identification.png",
-            "steering_calibration.png",
+            "model_replay_comparison.png",
             "coupled_speed_planning.png",
             "model_construction.png",
         }:

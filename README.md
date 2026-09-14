@@ -100,6 +100,7 @@ Read `docs/QUICKSTART.md` for the complete workflow.
 ## Model details
 
 - [Nonlinear model to MPC construction](assets/figures/model_construction.png)
+- [Lateral model replay validation](assets/figures/model_replay_comparison.png)
 - [MPC weight scheduling](assets/figures/weight_schedules.png)
 - [Coupled speed planning](assets/figures/coupled_speed_planning.png)
 - [Lateral model identification](assets/figures/model_identification.png)

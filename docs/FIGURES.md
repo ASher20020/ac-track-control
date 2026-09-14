@@ -69,6 +69,15 @@ The lateral and longitudinal controllers start from nonlinear equations, apply
 the relevant tire or actuator approximation, discretize the model, and only
 then assemble the real-time condensed QP.
 
+## Model replay validation
+
+![Lateral identification replay validation](../assets/figures/model_replay_comparison.png)
+
+Two clean replay windows compare measured lateral and yaw acceleration against
+one-step predictions from the identified model. The comparison is intentionally
+limited to one-step prediction from measured states rather than an open-loop
+long-horizon vehicle simulation.
+
 ## Weight scheduling
 
 ![MPC weight scheduling](../assets/figures/weight_schedules.png)
@@ -82,16 +91,6 @@ steering, acceleration and jerk costs.
 
 Coefficients are fitted independently in five speed bands. The figure also
 shows the sample count and the lateral/yaw fit quality.
-
-## Legacy steady-state steering check
-
-![Steady-state steering check](../assets/figures/steering_calibration.png)
-
-The left panel projects the normalized steering-axis response onto the
-steady-state bicycle relation. The right panel compares the band-wise effective
-axis scale with the scale derived from the identified dynamic model. This is a
-legacy consistency check; it is not part of the final LMPC model pipeline and
-is not an independent physical steering-angle measurement.
 
 ## Coupled speed planning
 

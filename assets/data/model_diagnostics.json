@@ -232,64 +232,29 @@
       }
     ]
   },
-  "steering_calibration": {
-    "source": "logs\\manual_steering_calibration_highspeed.csv",
-    "valid_samples": 3332,
-    "intercept": 5.4943859151009224,
-    "slope": 0.0022192930070015714,
-    "k_steer_rad_per_axis": 0.5187112889480481,
-    "understeer_gradient": 0.0011511723362151746,
-    "fit_r2": 0.4403429505255948,
-    "derived_from_identified_model": {
-      "speed_range_kmh": [
-        20.0,
-        240.0
-      ],
-      "intercept": 4.780850712830701,
-      "slope": 0.002493462579935388,
-      "k_steer_rad_per_axis": 0.5961282146608881,
-      "understeer_gradient": 0.0014864233961006147
-    },
-    "bands": [
+  "model_replay_comparison": {
+    "source": "logs\\vehicle_dynamics_reference_20min.csv",
+    "prediction": "one-step response from measured states",
+    "segments": [
       {
-        "lower_kmh": 20.0,
-        "upper_kmh": 40.0,
-        "samples": 328,
-        "median_k_steer": 0.5875881007563621,
-        "p10_k_steer": 0.5381614898877204,
-        "p90_k_steer": 0.6098116821386059
+        "name": "Replay A",
+        "start_index": 24875,
+        "end_index": 25366,
+        "start_time_s": 507.08298699976876,
+        "end_time_s": 517.0694189998321,
+        "median_speed_kmh": 63.653389,
+        "lateral_r2": 0.9776205252925113,
+        "yaw_r2": 0.9462971368457423
       },
       {
-        "lower_kmh": 40.0,
-        "upper_kmh": 65.0,
-        "samples": 68,
-        "median_k_steer": 0.5093560703522837,
-        "p10_k_steer": 0.3320985777344644,
-        "p90_k_steer": 0.6841616046526722
-      },
-      {
-        "lower_kmh": 65.0,
-        "upper_kmh": 100.0,
-        "samples": 398,
-        "median_k_steer": 0.513386913777583,
-        "p10_k_steer": 0.38803948910334046,
-        "p90_k_steer": 0.7956580243036133
-      },
-      {
-        "lower_kmh": 100.0,
-        "upper_kmh": 160.0,
-        "samples": 827,
-        "median_k_steer": 0.5558162300694215,
-        "p10_k_steer": 0.36599092064603744,
-        "p90_k_steer": 0.7283643639352301
-      },
-      {
-        "lower_kmh": 160.0,
-        "upper_kmh": 260.0,
-        "samples": 1703,
-        "median_k_steer": 0.5497143113669113,
-        "p10_k_steer": 0.4119800259123569,
-        "p90_k_steer": 0.6832597508168958
+        "name": "Replay B",
+        "start_index": 31375,
+        "end_index": 31866,
+        "start_time_s": 639.5776799998712,
+        "end_time_s": 649.5658069998026,
+        "median_speed_kmh": 119.534363,
+        "lateral_r2": 0.9615389980135284,
+        "yaw_r2": 0.9844810267292071
       }
     ]
   },
