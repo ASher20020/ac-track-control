@@ -259,23 +259,21 @@ p\in\{0,0.15,0.30,0.45,0.60,0.75,0.90,1.00\}.
 \label{eq:brake-map}
 \end{equation}
 
-\section{Steady-state axis-response consistency relation}
+\section{Steering calibration relation}
 
-The normalized-axis response can be projected onto the steady-state relation
+The steady-state steering relation is
 
 \begin{equation}
 \frac{u v}{r}
 =
-\frac{L}{k_{\mathrm{eff}}}
-+ \frac{K_{\mathrm{eff}}}{k_{\mathrm{eff}}}v^2,
+\frac{L}{k}
++ \frac{K}{k}v^2,
 \label{eq:steering-calibration}
 \end{equation}
 
-where $L$ is the wheelbase. The effective scale $k_{\mathrm{eff}}$ and
-derived understeer gradient $K_{\mathrm{eff}}$ are not independently
-identifiable physical steering parameters unless the road-wheel angle is
-measured separately. They summarize the same normalized-axis response already
-identified by the dynamic model and are used here as a consistency check.
+where $L$ is the wheelbase, $k$ is the steering-axis scale, and $K$ is the
+understeer gradient. A linear least-squares fit of
+$u v/r$ against $v^2$ yields $L/k$ and $K/k$.
 
 \section{Linear model and steering-actuator augmentation}
 
