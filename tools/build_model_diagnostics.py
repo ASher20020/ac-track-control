@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from scipy.interpolate import RegularGridInterpolator
+
+from actc.longitudinal import LongitudinalPedalConfig
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -591,6 +594,139 @@ def build_model_replay_comparison() -> dict[str, object]:
     }
 
 
+def build_longitudinal_maps() -> dict[str, object]:
+    config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+    longitudinal = config["longitudinal_controller"]
+    pedal_config = LongitudinalPedalConfig()
+    acceleration_speed = np.asarray(
+        (0.0, 50.0, 100.0, 150.0, 220.0)
+    )
+    acceleration_capability = np.asarray((5.0, 4.0, 3.2, 2.8, 2.2))
+    coast_speed = np.asarray(
+        longitudinal["coast_down_accel_map_kmh"],
+        dtype=float,
+    )
+    coast_deceleration = np.asarray(
+        longitudinal["coast_down_accel_map_mps2"],
+        dtype=float,
+    )
+    brake_speed = np.asarray(
+        pedal_config.braking_response_speed_kmh,
+        dtype=float,
+    )
+    brake_pedal = np.asarray(
+        pedal_config.braking_response_pedal,
+        dtype=float,
+    )
+    brake_deceleration = np.asarray(
+        pedal_config.braking_response_decel_mps2,
+        dtype=float,
+    )
+
+    dense_speed = np.linspace(0.0, 260.0, 53)
+    dense_pedal = np.linspace(0.0, 1.0, 41)
+    interpolator = RegularGridInterpolator(
+        (brake_speed, brake_pedal),
+        brake_deceleration,
+        method="linear",
+    )
+    speed_mesh, pedal_mesh = np.meshgrid(
+        dense_speed,
+        dense_pedal,
+        indexing="ij",
+    )
+    deceleration_mesh = interpolator(
+        np.column_stack((speed_mesh.ravel(), pedal_mesh.ravel()))
+    ).reshape(speed_mesh.shape)
+    measured_speed_mesh, measured_pedal_mesh = np.meshgrid(
+        brake_speed,
+        brake_pedal,
+        indexing="ij",
+    )
+
+    fig = plt.figure(figsize=(14, 9), facecolor=COLORS["paper"])
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_facecolor(COLORS["white"])
+    surface = ax.plot_surface(
+        speed_mesh,
+        pedal_mesh,
+        deceleration_mesh,
+        cmap="viridis",
+        linewidth=0,
+        antialiased=True,
+        alpha=0.94,
+    )
+    ax.scatter(
+        measured_speed_mesh.ravel(),
+        measured_pedal_mesh.ravel(),
+        brake_deceleration.ravel(),
+        color=COLORS["white"],
+        edgecolors=COLORS["ink"],
+        linewidths=0.55,
+        s=17,
+        depthshade=False,
+        label="measured map points",
+    )
+    ax.set_xlabel("speed [km/h]", labelpad=12, fontsize=11)
+    ax.set_ylabel("brake pedal", labelpad=12, fontsize=11)
+    ax.set_zlabel(
+        r"deceleration [m/s$^2$]",
+        labelpad=12,
+        fontsize=11,
+    )
+    ax.set_title(
+        "Speed x pedal -> measured brake deceleration",
+        loc="left",
+        pad=22,
+        fontweight="bold",
+    )
+    ax.view_init(elev=27, azim=-132)
+    ax.set_box_aspect((1.45, 1.0, 0.78))
+    ax.legend(frameon=False, loc="upper left")
+    colorbar = fig.colorbar(
+        surface,
+        ax=ax,
+        shrink=0.68,
+        pad=0.09,
+        fraction=0.035,
+    )
+    colorbar.set_label(r"deceleration [m/s$^2$]")
+    fig.suptitle(
+        "Longitudinal brake calibration map",
+        x=0.055,
+        y=0.975,
+        ha="left",
+        fontsize=21,
+        fontweight="bold",
+        color=COLORS["ink"],
+    )
+    fig.text(
+        0.057,
+        0.935,
+        "Single 3D view of the speed-by-pedal deceleration surface",
+        ha="left",
+        fontsize=10.5,
+        color=COLORS["muted"],
+    )
+    fig.savefig(FIGURE_DIR / "longitudinal_maps.png", dpi=180)
+    plt.close(fig)
+    return {
+        "acceleration_map": {
+            "speed_kmh": acceleration_speed.tolist(),
+            "acceleration_mps2": acceleration_capability.tolist(),
+        },
+        "coast_map": {
+            "speed_kmh": coast_speed.tolist(),
+            "deceleration_mps2": coast_deceleration.tolist(),
+        },
+        "brake_map": {
+            "speed_kmh": brake_speed.tolist(),
+            "pedal": brake_pedal.tolist(),
+            "deceleration_mps2": brake_deceleration.tolist(),
+        },
+    }
+
+
 def _load_steering_samples(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     frame = pd.read_csv(path)
     speed = pd.to_numeric(frame["speed_kmh"], errors="coerce")
@@ -1115,6 +1251,7 @@ def main() -> int:
         "weight_schedules": build_weight_schedules(),
         "model_identification": build_model_identification(),
         "model_replay_comparison": build_model_replay_comparison(),
+        "longitudinal_maps": build_longitudinal_maps(),
         "coupled_speed_planning": build_coupled_speed_planning(),
         "model_construction": build_model_construction(),
     }
@@ -1122,12 +1259,14 @@ def main() -> int:
     output.write_text(
         json.dumps(diagnostics, indent=2, ensure_ascii=True),
         encoding="utf-8",
+        newline="\n",
     )
     for path in sorted(FIGURE_DIR.glob("*.png")):
         if path.name in {
             "weight_schedules.png",
             "model_identification.png",
             "model_replay_comparison.png",
+            "longitudinal_maps.png",
             "coupled_speed_planning.png",
             "model_construction.png",
         }:

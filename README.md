@@ -101,6 +101,7 @@ Read `docs/QUICKSTART.md` for the complete workflow.
 
 - [Nonlinear model to MPC construction](assets/figures/model_construction.png)
 - [Lateral model replay validation](assets/figures/model_replay_comparison.png)
+- [Longitudinal brake calibration map](assets/figures/longitudinal_maps.png)
 - [MPC weight scheduling](assets/figures/weight_schedules.png)
 - [Coupled speed planning](assets/figures/coupled_speed_planning.png)
 - [Lateral model identification](assets/figures/model_identification.png)

@@ -78,6 +78,13 @@ one-step predictions from the identified model. The comparison is intentionally
 limited to one-step prediction from measured states rather than an open-loop
 long-horizon vehicle simulation.
 
+## Longitudinal brake calibration map
+
+![Longitudinal calibration maps](../assets/figures/longitudinal_maps.png)
+
+A single 3D surface shows the measured speed-by-pedal brake deceleration map
+used by the pedal mapper.
+
 ## Weight scheduling
 
 ![MPC weight scheduling](../assets/figures/weight_schedules.png)
