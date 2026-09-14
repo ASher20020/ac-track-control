@@ -83,14 +83,15 @@ steering, acceleration and jerk costs.
 Coefficients are fitted independently in five speed bands. The figure also
 shows the sample count and the lateral/yaw fit quality.
 
-## Steady-state steering check
+## Legacy steady-state steering check
 
 ![Steady-state steering check](../assets/figures/steering_calibration.png)
 
 The left panel projects the normalized steering-axis response onto the
 steady-state bicycle relation. The right panel compares the band-wise effective
 axis scale with the scale derived from the identified dynamic model. This is a
-consistency check; it is not an independent physical steering-angle measurement.
+legacy consistency check; it is not part of the final LMPC model pipeline and
+is not an independent physical steering-angle measurement.
 
 ## Coupled speed planning
 
