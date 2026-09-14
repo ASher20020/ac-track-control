@@ -94,6 +94,10 @@ def analyze(path: Path) -> dict:
     design = np.column_stack((np.ones_like(x), x))
     coefficients, *_ = np.linalg.lstsq(design, y, rcond=None)
     intercept, slope = (float(value) for value in coefficients)
+    # Effective axis-to-road-wheel scale under the assumed bicycle model.
+    # It is not independently identifiable without a physical steering-angle
+    # measurement, so treat this as a consistency statistic rather than an
+    # additional plant model.
     k_steer = wheelbase / max(intercept, 1e-6)
     understeer = slope * k_steer
 

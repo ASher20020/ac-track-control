@@ -377,6 +377,76 @@ def _load_steering_samples(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarr
     )
 
 
+def _derive_steady_state_metrics() -> dict[str, float]:
+    model_payload = json.loads(MODEL_PATH.read_text(encoding="utf-8"))
+    model = model_payload["model"]
+    speed_kmh = np.linspace(20.0, 240.0, 1000)
+    speed_mps = speed_kmh / 3.6
+    map_keys = (
+        "lateral_velocity_damping_map",
+        "lateral_yaw_coupling_map",
+        "yaw_velocity_coupling_map",
+        "yaw_rate_damping_map",
+        "steer_lateral_gain_map",
+        "steer_yaw_gain_map",
+    )
+    (
+        lateral_damping,
+        lateral_yaw,
+        yaw_velocity,
+        yaw_damping,
+        steer_lateral,
+        steer_yaw,
+    ) = tuple(
+        _interp(
+            speed_kmh,
+            model["direct_model_map_kmh"],
+            model[key],
+        )
+        for key in map_keys
+    )
+    uv_over_r = np.zeros_like(speed_mps)
+    for index, speed in enumerate(speed_mps):
+        state_matrix = np.asarray(
+            [
+                [
+                    -lateral_damping[index] / speed,
+                    lateral_yaw[index] / speed - speed,
+                ],
+                [
+                    yaw_velocity[index] / speed,
+                    yaw_damping[index] / speed,
+                ],
+            ]
+        )
+        steady_state = np.linalg.solve(
+            state_matrix,
+            -np.asarray(
+                [steer_lateral[index], steer_yaw[index]]
+            ),
+        )
+        uv_over_r[index] = speed / steady_state[1]
+    design = np.column_stack(
+        [np.ones_like(speed_mps), speed_mps * speed_mps]
+    )
+    intercept, slope = (
+        float(value)
+        for value in np.linalg.lstsq(
+            design,
+            uv_over_r,
+            rcond=None,
+        )[0]
+    )
+    k_steer = 2.85 / max(intercept, 1e-6)
+    return {
+        "speed_range_kmh": (20.0, 240.0),
+        "intercept": intercept,
+        "slope": slope,
+        "k_steer_rad_per_axis": k_steer,
+        "understeer_gradient": slope * k_steer,
+    }
+
+
 def build_steering_calibration() -> dict[str, object]:
     log_path = (
         PROJECT_ROOT
@@ -398,6 +468,7 @@ def build_steering_calibration() -> dict[str, object]:
         np.sum((fitted - y) ** 2)
         / max(np.sum((y - np.mean(y)) ** 2), 1e-12)
     )
+    derived = _derive_steady_state_metrics()
 
     bands = []
     for lower, upper in (
@@ -466,7 +537,7 @@ def build_steering_calibration() -> dict[str, object]:
     axes[0].set_xlabel(r"$v^2$ [(m/s)$^2$]")
     axes[0].set_ylabel(r"$u v / r$ [rad]")
     axes[0].set_title(
-        "Steady-state steering regression",
+        "Effective bicycle-model regression",
         loc="left",
         fontweight="bold",
     )
@@ -480,6 +551,16 @@ def build_steering_calibration() -> dict[str, object]:
         va="top",
         fontsize=9.5,
         color=COLORS["ink"],
+    )
+    axes[0].text(
+        0.02,
+        0.87,
+        rf"identified model: $k_{{eff}}="
+        rf"{derived['k_steer_rad_per_axis']:.4f}$",
+        transform=axes[0].transAxes,
+        va="top",
+        fontsize=9,
+        color=COLORS["muted"],
     )
 
     centers = [
@@ -510,12 +591,22 @@ def build_steering_calibration() -> dict[str, object]:
         color=COLORS["orange"],
         linestyle="--",
         linewidth=1.5,
-        label=f"global k = {k_steer:.4f}",
+        label=f"data fit k_eff = {k_steer:.4f}",
+    )
+    axes[1].axhline(
+        derived["k_steer_rad_per_axis"],
+        color=COLORS["blue"],
+        linestyle=":",
+        linewidth=1.8,
+        label=(
+            "identified model k_eff = "
+            f"{derived['k_steer_rad_per_axis']:.4f}"
+        ),
     )
     axes[1].set_xlabel("speed [km/h]")
     axes[1].set_ylabel("steering-axis scale [rad/axis]")
     axes[1].set_title(
-        "Band-wise steering-axis calibration",
+        "Band-wise effective scale estimate",
         loc="left",
         fontweight="bold",
     )
@@ -526,7 +617,7 @@ def build_steering_calibration() -> dict[str, object]:
         ax.grid(color=COLORS["grid"], alpha=0.75)
         ax.set_axisbelow(True)
     fig.suptitle(
-        "Steering-axis calibration and understeer fit",
+        "Steady-state axis-response consistency check",
         x=0.055,
         y=0.98,
         ha="left",
@@ -546,6 +637,7 @@ def build_steering_calibration() -> dict[str, object]:
         "k_steer_rad_per_axis": k_steer,
         "understeer_gradient": understeer,
         "fit_r2": r2,
+        "derived_from_identified_model": derived,
         "bands": bands,
     }
 

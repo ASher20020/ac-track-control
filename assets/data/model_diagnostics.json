@@ -240,6 +240,16 @@
     "k_steer_rad_per_axis": 0.5187112889480481,
     "understeer_gradient": 0.0011511723362151746,
     "fit_r2": 0.4403429505255948,
+    "derived_from_identified_model": {
+      "speed_range_kmh": [
+        20.0,
+        240.0
+      ],
+      "intercept": 4.780850712830701,
+      "slope": 0.002493462579935388,
+      "k_steer_rad_per_axis": 0.5961282146608881,
+      "understeer_gradient": 0.0014864233961006147
+    },
     "bands": [
       {
         "lower_kmh": 20.0,

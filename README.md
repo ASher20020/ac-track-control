@@ -103,7 +103,7 @@ Read `docs/QUICKSTART.md` for the complete workflow.
 - [MPC weight scheduling](assets/figures/weight_schedules.png)
 - [Coupled speed planning](assets/figures/coupled_speed_planning.png)
 - [Lateral model identification](assets/figures/model_identification.png)
-- [Steering calibration](assets/figures/steering_calibration.png)
+- [Steady-state steering check](assets/figures/steering_calibration.png)
 - [Linear model and actuator matrices](assets/figures/mpc_equations_page-3.png)
 
 ## Key limitations

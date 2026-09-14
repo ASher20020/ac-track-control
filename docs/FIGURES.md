@@ -83,12 +83,14 @@ steering, acceleration and jerk costs.
 Coefficients are fitted independently in five speed bands. The figure also
 shows the sample count and the lateral/yaw fit quality.
 
-## Steering calibration
+## Steady-state steering check
 
-![Steering calibration](../assets/figures/steering_calibration.png)
+![Steady-state steering check](../assets/figures/steering_calibration.png)
 
-The left panel fits the steady-state steering relation. The right panel shows
-the steering-axis scale by speed band and the global fitted scale.
+The left panel projects the normalized steering-axis response onto the
+steady-state bicycle relation. The right panel compares the band-wise effective
+axis scale with the scale derived from the identified dynamic model. This is a
+consistency check; it is not an independent physical steering-angle measurement.
 
 ## Coupled speed planning
 
