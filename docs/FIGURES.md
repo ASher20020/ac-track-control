@@ -85,6 +85,14 @@ long-horizon vehicle simulation.
 A single 3D surface shows the measured speed-by-pedal brake deceleration map
 used by the pedal mapper.
 
+## Pedal mapping pipeline
+
+![Pedal mapping pipeline](../assets/figures/pedal_mapping_pipeline.png)
+
+The diagram traces the full execution path from MPC acceleration through
+road-load compensation, mode hysteresis, throttle and brake maps, actuator
+limits and finally the virtual-controller outputs.
+
 ## Weight scheduling
 
 ![MPC weight scheduling](../assets/figures/weight_schedules.png)

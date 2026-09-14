@@ -864,6 +864,8 @@ $$
 MPC 输出的是目标加速度 $a_{\mathrm{cmd}}$，踏板映射器负责把它变成虚拟手柄的
 油门 $T$ 和刹车 $B$。映射前先补偿滑行阻力：
 
+![Pedal mapping pipeline](../assets/figures/pedal_mapping_pipeline.png)
+
 $$
 a_{\mathrm{prop}}
 =
@@ -921,6 +923,18 @@ $$
 
 因此纵向执行链是“MPC 目标加速度 → 阻力补偿 → 工作模式 → 油门能力归一化或
 刹车表反查 → 速率/转向/滑移限制 → 虚拟踏板”，不是把 MPC 输出直接当成踏板百分比。
+
+数值示例：
+
+| 情形 | 输入 | 中间结果 | 输出 |
+| --- | --- | --- | --- |
+| 120 km/h 制动 | $a_{\mathrm{cmd}}=-3.0$ | $a_{\mathrm{coast}}=0.85$，所以 $a_{\mathrm{prop}}=-2.15$ | 反查得到 $B\approx0.159$ |
+| 100 km/h 加速 | $a_{\mathrm{cmd}}=1.5$ | $a_{\mathrm{coast}}=0.75$，所以 $a_{\mathrm{prop}}=2.25$ | $a_{\mathrm{cap}}(100)=3.2$，所以 $T\approx0.703$ |
+| 120 km/h 滑行 | $a_{\mathrm{cmd}}=-0.85$ | $a_{\mathrm{prop}}\approx0$ | 进入滑行死区，$T=B=0$ |
+
+如果同时有较大转向或后轮滑移，输出还会经过油门限制：
+转向只降低允许油门，滑移超过阈值后进一步削减油门；
+油门和刹车不会同时大于零。
 
 ## 7. 实测结果
 

@@ -727,6 +727,127 @@ def build_longitudinal_maps() -> dict[str, object]:
     }
 
 
+def build_pedal_mapping_pipeline() -> dict[str, object]:
+    fig, ax = plt.subplots(figsize=(16, 8.2), facecolor=COLORS["paper"])
+    ax.set_facecolor(COLORS["paper"])
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 8.2)
+    ax.axis("off")
+    ax.text(
+        0.55,
+        7.75,
+        "From MPC acceleration to throttle and brake",
+        fontsize=21,
+        fontweight="bold",
+        color=COLORS["ink"],
+    )
+    ax.text(
+        0.57,
+        7.38,
+        "Road-load compensation, mode hysteresis, map lookup and actuator limits",
+        fontsize=10.5,
+        color=COLORS["muted"],
+    )
+
+    cards = (
+        (
+            0.55,
+            5.35,
+            "MPC output",
+            r"$a_{\mathrm{cmd}}$",
+            COLORS["blue"],
+        ),
+        (
+            3.45,
+            5.35,
+            "Road load",
+            r"$a_{\mathrm{prop}}=a_{\mathrm{cmd}}+a_{\mathrm{coast}}(v)$",
+            COLORS["orange"],
+        ),
+        (
+            6.35,
+            5.35,
+            "Mode selection",
+            "hysteresis\nbrake / coast / throttle",
+            COLORS["green"],
+        ),
+    )
+    for x, y, title, body, color in cards:
+        _card(ax, x, y, 2.55, 1.55, title, body, color)
+    for left in (cards[0], cards[1]):
+        _arrow(
+            ax,
+            (left[0] + 2.55, left[1] + 0.78),
+            (left[0] + 2.80, left[1] + 0.78),
+            COLORS["muted"],
+        )
+
+    _card(
+        ax,
+        3.20,
+        2.70,
+        4.65,
+        1.75,
+        "Throttle branch",
+        r"$T=\mathrm{clamp}(a_{\mathrm{prop}}/a_{\mathrm{cap}}(v),0,1)$"
+        + "\n"
+        + r"$T_{\mathrm{limit}}=\min(T,T_{\mathrm{speed}}T_{\delta}T_{\mathrm{slip}})$",
+        COLORS["cyan"],
+    )
+    _card(
+        ax,
+        8.45,
+        2.70,
+        4.65,
+        1.75,
+        "Brake branch",
+        r"$B=\mathrm{I}_{v,a}^{-1}(-a_{\mathrm{prop}})$"
+        + "\n"
+        + "measured speed-by-pedal map",
+        COLORS["red"],
+    )
+    _arrow(ax, (7.62, 5.35), (5.52, 4.45), COLORS["cyan"])
+    _arrow(ax, (7.62, 5.35), (10.78, 4.45), COLORS["red"])
+
+    _card(
+        ax,
+        6.35,
+        0.60,
+        4.65,
+        1.45,
+        "Actuator limits",
+        "pedal rates, steering derating,\nslip derating, mutual exclusion",
+        COLORS["orange"],
+    )
+    _arrow(ax, (5.52, 2.70), (7.35, 2.05), COLORS["muted"])
+    _arrow(ax, (10.78, 2.70), (9.98, 2.05), COLORS["muted"])
+    _arrow(ax, (8.68, 0.60), (8.68, 0.15), COLORS["green"])
+    ax.text(
+        8.68,
+        0.08,
+        "virtual controller: throttle T, brake B",
+        ha="center",
+        va="bottom",
+        fontsize=10,
+        fontweight="bold",
+        color=COLORS["ink"],
+    )
+    fig.savefig(FIGURE_DIR / "pedal_mapping_pipeline.png", dpi=180)
+    plt.close(fig)
+    return {
+        "formula": (
+            "a_prop = a_cmd + max(0, a_coast(v)); "
+            "T = clamp(a_prop/a_cap(v), 0, 1) for propulsion; "
+            "B = inverse_brake_map(v, -a_prop) for braking"
+        ),
+        "limits": [
+            "throttle and brake rate limits",
+            "steering and rear-slip throttle derating",
+            "throttle/brake mutual exclusion",
+        ],
+    }
+
+
 def _load_steering_samples(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     frame = pd.read_csv(path)
     speed = pd.to_numeric(frame["speed_kmh"], errors="coerce")
@@ -1252,6 +1373,7 @@ def main() -> int:
         "model_identification": build_model_identification(),
         "model_replay_comparison": build_model_replay_comparison(),
         "longitudinal_maps": build_longitudinal_maps(),
+        "pedal_mapping_pipeline": build_pedal_mapping_pipeline(),
         "coupled_speed_planning": build_coupled_speed_planning(),
         "model_construction": build_model_construction(),
     }
@@ -1267,6 +1389,7 @@ def main() -> int:
             "model_identification.png",
             "model_replay_comparison.png",
             "longitudinal_maps.png",
+            "pedal_mapping_pipeline.png",
             "coupled_speed_planning.png",
             "model_construction.png",
         }:
