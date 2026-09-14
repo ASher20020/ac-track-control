@@ -185,6 +185,99 @@ $$
 
 ![Coupled speed planning](../assets/figures/coupled_speed_planning.png)
 
+曲率速度、速度倍率和倍率后抓地上限分别为：
+
+$$
+v_{\kappa,i}
+=
+\min\left(
+v_{\max},
+\max\left(
+v_{\min},
+\sqrt{\frac{a_{\mathrm{lat,plan}}}{|\kappa_i|}}
+\right)
+\right),
+$$
+
+$$
+v_{s,i}
+=
+\min\left(
+v_{\kappa,i}s(v_{\kappa,i}),
+\sqrt{\frac{a_{\mathrm{lat,cap}}}{|\kappa_i|}}
+\right).
+$$
+
+高速制动预瞄和有效制动距离为：
+
+$$
+\tau_{\mathrm{eff}}
+=
+\tau_0
++ \max(0,v_i-200)g_{\mathrm{hs}},
+$$
+
+$$
+d_{\mathrm{eff}}
+=
+\max(0,d_i-v_i\tau_{\mathrm{eff}})
++ d_{\mathrm{lead}}.
+$$
+
+横向载荷和转向量共同缩放制动能力：
+
+$$
+u_b
+=
+\max\left(
+\frac{|\delta|}{\delta_{\max}},
+\frac{|a_y|}{a_{y,\mathrm{ref}}}
+\right),
+\qquad
+\gamma_b
+=
+\sqrt{\max(0.25,1-u_b^2)},
+\qquad
+a_{\mathrm{brake,eff}}
+=
+a_{\mathrm{brake}}\gamma_b.
+$$
+
+纵向预览先由前向加速度约束生成：
+
+$$
+v_{\mathrm{ref},k}
+=
+\min\left(
+v_{\mathrm{ref},k-1}+a_{\mathrm{accel}}\Delta t,
+v_{s,k}
+\right),
+$$
+
+再从后向前施加制动约束：
+
+$$
+v_{\mathrm{ref},k}
+=
+\min\left(
+v_{\mathrm{ref},k},
+\sqrt{v_{\mathrm{ref},k+1}^2
++2a_{\mathrm{brake,eff}}\Delta s_k}
+\right).
+$$
+
+横向载荷与速度同时缩放纵向 MPC 的代价权重：
+
+$$
+r_a
+=
+r_{a,0}s_a(v)s_a(|a_y|),
+\qquad
+r_j
+=
+r_{j,0}s_j(v)s_j(|a_y|).
+$$
+
 因此，当前实现是“共享状态和约束参数的两层 MPC 协调”，不是单个同时求解横向和纵向的联合优化器。这个区别会影响后续扩展：如果实车需要显式联合摩擦圆约束，可以把制动缩放提升为联合 MPC 的约束项。
 
 ## 4. 横向 LMPC
