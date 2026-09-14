@@ -1,7 +1,15 @@
-# AC Track Control
+<h1 align="center">AC TRACK CONTROL</h1>
 
 <p align="center">
-  <img src="assets/figures/hero_drive.gif" alt="Assetto Corsa closed-loop autonomous driving" width="960">
+  Planning + lateral MPC + longitudinal MPC + AC closed loop
+</p>
+
+<p align="center">
+  A reusable simulator testbed for autonomous racing research.
+</p>
+
+<p align="center">
+  <img src="assets/figures/hero_overview.png" alt="AC Track Control product overview" width="100%">
 </p>
 
 <p align="center">
@@ -18,6 +26,15 @@
 </p>
 
 项目目标不是做一个“键盘自动驾驶 demo”，而是把赛车自动驾驶中真正需要打通的环节做成可复用工程：实时状态接口、模型辨识、速度与制动标定、路径规划、MPC 控制、日志复盘和赛道结果验证。
+
+## Product specs
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Tracks-3-132238?style=for-the-badge" alt="3 validated tracks">
+  <img src="https://img.shields.io/badge/Control-50%20Hz-132238?style=for-the-badge" alt="50 Hz closed-loop control">
+  <img src="https://img.shields.io/badge/Lateral%20LMPC-20%20x%2020%20ms-132238?style=for-the-badge" alt="Lateral LMPC 20 by 20 ms">
+  <img src="https://img.shields.io/badge/Longitudinal%20MPC-50%20x%2050%20ms-132238?style=for-the-badge" alt="Longitudinal MPC 50 by 50 ms">
+</p>
 
 ## Verified results
 
@@ -50,8 +67,6 @@ exact mapping.
 ![Closed-loop architecture](assets/figures/closed_loop_architecture.png)
 
 ![Track trajectories](assets/figures/track_maps.png)
-
-![AC Track Control overview](assets/figures/hero_overview.png)
 
 ## What is implemented
 
