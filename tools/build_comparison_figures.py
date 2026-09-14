@@ -8,19 +8,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from tools.figure_theme import THEME, apply_dark_theme
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FIGURE_DIR = PROJECT_ROOT / "assets" / "figures"
 DATA_DIR = PROJECT_ROOT / "assets" / "data"
 
 COLORS = {
-    "ink": "#172033",
-    "muted": "#667085",
-    "grid": "#D7DDE7",
-    "human": "#2563EB",
-    "auto": "#D97706",
-    "paper": "#F7F8FA",
-    "white": "#FFFFFF",
+    **THEME,
+    "human": THEME["blue"],
+    "auto": THEME["orange"],
 }
 
 
@@ -306,12 +304,7 @@ def main() -> int:
     parser.add_argument("--bin-m", type=float, default=25.0)
     args = parser.parse_args()
 
-    plt.rcParams["font.sans-serif"] = [
-        "Microsoft YaHei",
-        "SimHei",
-        "DejaVu Sans",
-    ]
-    plt.rcParams["axes.unicode_minus"] = False
+    apply_dark_theme()
 
     track_specs = (
         {

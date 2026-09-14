@@ -49,17 +49,11 @@ the strongest evidence for each closed-loop run.
 The pipeline keeps data collection, sample filtering, regression, scheduled
 maps and closed-loop validation separate.
 
-## Formula overview
+## Paper equations
 
-![Formula overview page 1](../assets/figures/mpc_equations_page-1.png)
-
-![Formula overview page 2](../assets/figures/mpc_equations_page-2.png)
-
-![Linear model and actuator augmentation](../assets/figures/mpc_equations_page-3.png)
-
-The equations are typeset with LaTeX, equation numbering and standard academic
-math spacing. The source is `docs/assets/mpc_equations.tex` and the compiled PDF
-is `docs/assets/build/mpc_equations.pdf`.
+The typeset equation document is available at
+`docs/assets/build/mpc_equations.pdf`. Its source is
+`docs/assets/mpc_equations.tex`.
 
 ## Model construction
 
