@@ -652,6 +652,132 @@ def build_coupled_speed_planning() -> dict[str, object]:
     }
 
 
+def build_model_construction() -> dict[str, object]:
+    fig, ax = plt.subplots(figsize=(16, 9), facecolor=COLORS["paper"])
+    ax.set_facecolor(COLORS["paper"])
+    ax.set_xlim(0, 16)
+    ax.set_ylim(0, 9)
+    ax.axis("off")
+    ax.text(
+        0.55,
+        8.45,
+        "From nonlinear vehicle equations to real-time QP models",
+        fontsize=21,
+        fontweight="bold",
+        color=COLORS["ink"],
+    )
+    ax.text(
+        0.57,
+        8.05,
+        "The two controllers share the same modeling sequence, but retain different state and actuator structures",
+        fontsize=10.5,
+        color=COLORS["muted"],
+    )
+
+    rows = [
+        (
+            5.25,
+            "Lateral",
+            COLORS["blue"],
+            [
+                (
+                    "Nonlinear bicycle",
+                    r"$m(\dot v_y+v_xr)=F_{yf}+F_{yr}$" + "\n"
+                    + r"$I_z\dot r=aF_{yf}-bF_{yr}$",
+                ),
+                (
+                    "Linear tire expansion",
+                    r"$F_{yf}=C_f\alpha_f,\ F_{yr}=C_r\alpha_r$" + "\n"
+                    + r"$\alpha_f\approx\delta-(v_y+ar)/v_x$",
+                ),
+                (
+                    "Frenet linearization",
+                    r"$\dot x=A_c(v_x)x+B_c(v_x)u$" + "\n"
+                    + "small-angle and fixed-speed horizon",
+                ),
+                (
+                    "Actuator augmentation",
+                    r"$\dot\delta=(\delta_{cmd}-\delta)/\tau$" + "\n"
+                    + r"$A_d=I+A_{aug}\Delta t$",
+                ),
+                (
+                    "Condensed LMPC QP",
+                    "state error + control\n+ control-rate cost",
+                ),
+            ],
+        ),
+        (
+            1.55,
+            "Longitudinal",
+            COLORS["orange"],
+            [
+                (
+                    "Nonlinear speed",
+                    r"$\dot v=a_x-a_{coast}(v)$",
+                ),
+                (
+                    "Actuator lag",
+                    r"$\dot a=(u-a)/\tau_a$",
+                ),
+                (
+                    "Forward Euler",
+                    r"$a_{k+1}=(1-\alpha)a_k+\alpha u_k$" + "\n"
+                    + r"$\alpha=\Delta t/\tau_a$",
+                ),
+                (
+                    "Speed prediction",
+                    r"$v_{k+1}=v_k+\Delta t(a_{k+1}-a_{coast})$",
+                ),
+                (
+                    "Condensed MPC QP",
+                    "speed + acceleration\n+ jerk constraints",
+                ),
+            ],
+        ),
+    ]
+
+    width = 2.72
+    height = 2.15
+    xs = [0.45, 3.45, 6.45, 9.45, 12.45]
+    for y, label, color, cards in rows:
+        ax.text(
+            0.52,
+            y + height + 0.22,
+            label,
+            fontsize=12,
+            fontweight="bold",
+            color=color,
+        )
+        for x, (title, body) in zip(xs, cards):
+            _card(ax, x, y, width, height, title, body, color)
+        for index in range(len(xs) - 1):
+            _arrow(
+                ax,
+                (xs[index] + width, y + height / 2),
+                (xs[index + 1], y + height / 2),
+                color,
+            )
+
+    fig.savefig(FIGURE_DIR / "model_construction.png", dpi=180)
+    plt.close(fig)
+    return {
+        "lateral": [
+            "nonlinear dynamic bicycle equation",
+            "linear tire force approximation and small-angle Frenet errors",
+            "continuous A_c(vx), B_c(vx)",
+            "steering actuator augmentation",
+            "discrete condensed QP",
+        ],
+        "longitudinal": [
+            "coast-down nonlinear speed equation",
+            "first-order acceleration response",
+            "forward Euler discretization",
+            "speed prediction",
+            "acceleration and jerk constrained QP",
+        ],
+    }
+
+
 def main() -> int:
     _style()
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
@@ -661,6 +787,7 @@ def main() -> int:
         "model_identification": build_model_identification(),
         "steering_calibration": build_steering_calibration(),
         "coupled_speed_planning": build_coupled_speed_planning(),
+        "model_construction": build_model_construction(),
     }
     output = DATA_DIR / "model_diagnostics.json"
     output.write_text(
@@ -673,6 +800,7 @@ def main() -> int:
             "model_identification.png",
             "steering_calibration.png",
             "coupled_speed_planning.png",
+            "model_construction.png",
         }:
             print(path.relative_to(PROJECT_ROOT))
     print(output.relative_to(PROJECT_ROOT))

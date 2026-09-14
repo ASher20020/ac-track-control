@@ -61,6 +61,14 @@ The equations are typeset with LaTeX, equation numbering and standard academic
 math spacing. The source is `docs/assets/mpc_equations.tex` and the compiled PDF
 is `docs/assets/build/mpc_equations.pdf`.
 
+## Model construction
+
+![Model construction](../assets/figures/model_construction.png)
+
+The lateral and longitudinal controllers start from nonlinear equations, apply
+the relevant tire or actuator approximation, discretize the model, and only
+then assemble the real-time condensed QP.
+
 ## Weight scheduling
 
 ![MPC weight scheduling](../assets/figures/weight_schedules.png)

@@ -291,5 +291,21 @@
       "longitudinal MPC generates acceleration; pedal map applies rate and slip limits",
       "vehicle speed and lateral acceleration feed back to the next planning cycle"
     ]
+  },
+  "model_construction": {
+    "lateral": [
+      "nonlinear dynamic bicycle equation",
+      "linear tire force approximation and small-angle Frenet errors",
+      "continuous A_c(vx), B_c(vx)",
+      "steering actuator augmentation",
+      "discrete condensed QP"
+    ],
+    "longitudinal": [
+      "coast-down nonlinear speed equation",
+      "first-order acceleration response",
+      "forward Euler discretization",
+      "speed prediction",
+      "acceleration and jerk constrained QP"
+    ]
   }
 }
