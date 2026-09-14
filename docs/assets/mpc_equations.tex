@@ -275,4 +275,103 @@ where $L$ is the wheelbase, $k$ is the steering-axis scale, and $K$ is the
 understeer gradient. A linear least-squares fit of
 $u v/r$ against $v^2$ yields $L/k$ and $K/k$.
 
+\section{Linear model and steering-actuator augmentation}
+
+For the five-state Frenet model, the continuous-time state matrix is
+
+\begin{equation}
+A_c=
+\begin{bmatrix}
+0 & v_x & 0 & 1 & 0\\
+0 & 0 & 0 & 0 & 1\\
+0 & 0 & 0 & 0 & 0\\
+0 & 0 & 0 & a_{33} & a_{34}\\
+0 & 0 & 0 & a_{43} & a_{44}
+\end{bmatrix},
+\qquad
+B_c=
+\begin{bmatrix}
+0 & 0\\
+0 & 0\\
+0 & 1\\
+b_{31} & 0\\
+b_{41} & 0
+\end{bmatrix}.
+\label{eq:continuous-matrices}
+\end{equation}
+
+The speed-scheduled coefficients are
+
+\begin{align}
+a_{33}&=-\frac{c_{\mathrm{lat}}}{v_x},&
+a_{34}&=\frac{c_{\mathrm{yaw,lat}}}{v_x}-v_x,\\
+a_{43}&=\frac{c_{\mathrm{yaw,vel}}}{v_x},&
+a_{44}&=\frac{c_{\mathrm{yaw,damp}}}{v_x}.
+\end{align}
+
+With an actuator state $\delta$, the augmented continuous model is
+
+\begin{equation}
+\begin{bmatrix}
+\dot e_y\\
+\dot e_\psi\\
+\dot v_x\\
+\dot v_y\\
+\dot r\\
+\dot\delta
+\end{bmatrix}
+=
+A_{\mathrm{aug}}
+\begin{bmatrix}
+e_y\\
+e_\psi\\
+v_x\\
+v_y\\
+r\\
+\delta
+\end{bmatrix}
++
+B_{\mathrm{aug}}
+\begin{bmatrix}
+\delta_{\mathrm{cmd}}\\
+a_x
+\end{bmatrix},
+\end{equation}
+
+where
+
+\begin{equation}
+A_{\mathrm{aug}}=
+\begin{bmatrix}
+0 & v_x & 0 & 1 & 0 & 0\\
+0 & 0 & 0 & 0 & 1 & 0\\
+0 & 0 & 0 & 0 & 0 & 0\\
+0 & 0 & 0 & a_{33} & a_{34} & b_{31}\\
+0 & 0 & 0 & a_{43} & a_{44} & b_{41}\\
+0 & 0 & 0 & 0 & 0 & -1/\tau_{\mathrm{steer}}
+\end{bmatrix},
+\end{equation}
+
+\begin{equation}
+B_{\mathrm{aug}}=
+\begin{bmatrix}
+0 & 0\\
+0 & 0\\
+0 & 1\\
+0 & 0\\
+0 & 0\\
+1/\tau_{\mathrm{steer}} & 0
+\end{bmatrix}.
+\end{equation}
+
+The sampled model used by the QP is
+
+\begin{equation}
+A_d=I+A_{\mathrm{aug}}\Delta t,
+\qquad
+B_d=B_{\mathrm{aug}}\Delta t,
+\end{equation}
+
+with the discrete spectral radius bounded before QP assembly.
+
 \end{document}

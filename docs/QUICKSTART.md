@@ -84,6 +84,8 @@ Regenerate the public figures:
 
 ```powershell
 python -m tools.build_comparison_figures
+python -m tools.build_visual_report
+python -m tools.build_model_diagnostics
 python -m tools.build_project_assets
 ```
 

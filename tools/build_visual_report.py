@@ -260,22 +260,22 @@ def build_hero() -> None:
     speed = _speed_on_path(lap, track_path)
     points = points / 1000.0
 
-    fig, ax = plt.subplots(figsize=(16, 7.4), facecolor=COLORS["navy"])
+    fig, ax = plt.subplots(figsize=(16, 9), facecolor=COLORS["navy"])
     ax.set_facecolor(COLORS["navy"])
     ax.set_xlim(0, 16)
-    ax.set_ylim(0, 7.4)
+    ax.set_ylim(0, 9)
     ax.axis("off")
 
     for x in np.linspace(0.4, 15.6, 10):
         ax.plot(
             [x, x],
-            [0.3, 7.1],
+            [0.3, 8.7],
             color="#17334B",
             linewidth=0.6,
             alpha=0.35,
             zorder=0,
         )
-    for y in np.linspace(0.4, 7.0, 7):
+    for y in np.linspace(0.4, 8.6, 8):
         ax.plot(
             [0.4, 15.6],
             [y, y],
@@ -287,7 +287,7 @@ def build_hero() -> None:
 
     ax.text(
         0.8,
-        6.35,
+        7.70,
         "AC TRACK CONTROL",
         fontsize=29,
         fontweight="bold",
@@ -295,14 +295,14 @@ def build_hero() -> None:
     )
     ax.text(
         0.82,
-        5.78,
+        7.10,
         "Planning + lateral MPC + longitudinal MPC + AC closed loop",
         fontsize=13,
         color="#A9C5D5",
     )
     ax.text(
         0.82,
-        5.03,
+        6.45,
         "A reusable simulator testbed for autonomous racing research.",
         fontsize=11.5,
         color="#D0E0E8",
@@ -319,7 +319,7 @@ def build_hero() -> None:
         _card(
             ax,
             x,
-            3.35,
+            4.72,
             1.5,
             1.12,
             edge="#28445D",
@@ -328,7 +328,7 @@ def build_hero() -> None:
         )
         ax.text(
             x + 0.20,
-            4.11,
+            5.49,
             value,
             color=COLORS["white"],
             fontsize=15,
@@ -336,7 +336,7 @@ def build_hero() -> None:
         )
         ax.text(
             x + 0.20,
-            3.68,
+            5.07,
             label,
             color="#9EB9CA",
             fontsize=9.5,
@@ -344,14 +344,14 @@ def build_hero() -> None:
 
     ax.text(
         0.82,
-        2.58,
+        3.65,
         "Nordschleife lap time",
         fontsize=11,
         color="#8BA9BB",
     )
     ax.text(
         0.82,
-        2.04,
+        3.05,
         "Auto 8:46.825",
         fontsize=31,
         fontweight="bold",
@@ -359,13 +359,13 @@ def build_hero() -> None:
     )
     ax.text(
         0.85,
-        1.58,
+        2.58,
         "Human 7:17.632  |  Gap +1:29.193  |  0 tyres out",
         fontsize=10.5,
         color="#C1D6E1",
     )
 
-    map_ax = fig.add_axes([0.53, 0.10, 0.43, 0.78])
+    map_ax = fig.add_axes([0.53, 0.13, 0.43, 0.72])
     map_ax.set_facecolor(COLORS["navy"])
     map_points = points.copy()
     map_points[:, 0] -= np.mean(map_points[:, 0])
@@ -404,7 +404,7 @@ def build_hero() -> None:
     map_ax.set_aspect("equal")
     map_ax.axis("off")
 
-    colorbar_ax = fig.add_axes([0.57, 0.075, 0.34, 0.018])
+    colorbar_ax = fig.add_axes([0.57, 0.065, 0.34, 0.016])
     scalar = plt.cm.ScalarMappable(norm=norm, cmap=SPEED_CMAP)
     scalar.set_array([])
     colorbar = fig.colorbar(

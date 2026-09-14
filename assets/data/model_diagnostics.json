@@ -1,0 +1,295 @@
+{
+  "weight_schedules": {
+    "speed_map_kmh": [
+      0.0,
+      40.0,
+      80.0,
+      140.0,
+      220.0
+    ],
+    "q_lateral": [
+      1.0,
+      1.2762815625000001,
+      1.05,
+      0.7,
+      0.65
+    ],
+    "q_heading": [
+      1.0,
+      1.2166529024000001,
+      1.04,
+      0.95,
+      0.9
+    ],
+    "q_yaw_rate": [
+      1.0,
+      1.4693280768,
+      1.242,
+      1.15,
+      1.2
+    ],
+    "r_steer": [
+      1.6,
+      2.64479053824,
+      3.024,
+      3.5,
+      4.0
+    ],
+    "r_steer_rate": [
+      1.6,
+      3.6204429375,
+      3.6799999999999997,
+      4.0,
+      5.0
+    ],
+    "lateral_load_schedule_g": [
+      0.0,
+      0.3,
+      0.6,
+      0.9,
+      1.2
+    ],
+    "r_accel_lateral_scale": [
+      1.0,
+      1.1,
+      1.3,
+      1.55,
+      1.8
+    ],
+    "r_jerk_lateral_scale": [
+      1.0,
+      1.2,
+      1.5,
+      1.9,
+      2.4
+    ],
+    "yaw_response_load_scale": [
+      1.0,
+      0.9,
+      0.75,
+      0.6,
+      0.5,
+      0.45
+    ],
+    "speed_weight_schedule_kmh": [
+      0.0,
+      80.0,
+      140.0,
+      200.0,
+      260.0
+    ],
+    "r_accel_speed_scale": [
+      1.0,
+      1.05,
+      1.15,
+      1.3,
+      1.45
+    ],
+    "r_jerk_speed_scale": [
+      1.0,
+      1.15,
+      1.4,
+      1.75,
+      2.0
+    ]
+  },
+  "model_identification": {
+    "bands": [
+      {
+        "lower_kmh": 40.0,
+        "upper_kmh": 70.0,
+        "speed_kmh": 58.20610960225624,
+        "samples": 6205.0,
+        "lateral_r2": 0.9794251697923435,
+        "yaw_r2": 0.9232929495594688,
+        "c_lateral": 212.98425644278734,
+        "steer_lateral": 72.60241174249879,
+        "yaw_velocity": 28.366844281939926,
+        "yaw_damping": -254.69967787135985,
+        "steer_yaw": 42.76838900569038,
+        "steady_lateral_velocity_per_steer": 1.9175646094243746,
+        "steady_yaw_rate_per_steer": 2.928234066396354,
+        "continuous_eigenvalues": [
+          [
+            -14.464394510908907,
+            5.167429224606284
+          ],
+          [
+            -14.464394510908907,
+            -5.167429224606284
+          ]
+        ],
+        "mean_abs_lateral_g": 0.38547805855326345,
+        "p95_abs_lateral_g": 0.7126428363999998
+      },
+      {
+        "lower_kmh": 70.0,
+        "upper_kmh": 100.0,
+        "speed_kmh": 85.39675799798962,
+        "samples": 5969.0,
+        "lateral_r2": 0.9862647192686362,
+        "yaw_r2": 0.8937637747055637,
+        "c_lateral": 322.29700230211154,
+        "steer_lateral": 81.26724714976727,
+        "yaw_velocity": 36.104914082856844,
+        "yaw_damping": -249.85654602049937,
+        "steer_yaw": 41.47537594021621,
+        "steady_lateral_velocity_per_steer": -0.7132619748742827,
+        "steady_yaw_rate_per_steer": 3.834524355972985,
+        "continuous_eigenvalues": [
+          [
+            -12.060114325526275,
+            5.811487711986044
+          ],
+          [
+            -12.060114325526275,
+            -5.811487711986044
+          ]
+        ],
+        "mean_abs_lateral_g": 0.4506899753333891,
+        "p95_abs_lateral_g": 0.7513232112
+      },
+      {
+        "lower_kmh": 100.0,
+        "upper_kmh": 130.0,
+        "speed_kmh": 111.54376582109728,
+        "samples": 3773.0,
+        "lateral_r2": 0.9861565367568571,
+        "yaw_r2": 0.9127012794079133,
+        "c_lateral": 332.79141110767415,
+        "steer_lateral": 76.94376005131858,
+        "yaw_velocity": 44.758681544405036,
+        "yaw_damping": -234.26690219066396,
+        "steer_yaw": 40.76255852202825,
+        "steady_lateral_velocity_per_steer": -5.407353028796032,
+        "steady_yaw_rate_per_steer": 4.35797734841405,
+        "continuous_eigenvalues": [
+          [
+            -9.151051386558251,
+            6.498514676103619
+          ],
+          [
+            -9.151051386558251,
+            -6.498514676103619
+          ]
+        ],
+        "mean_abs_lateral_g": 0.4401925608343493,
+        "p95_abs_lateral_g": 0.7345397351999999
+      },
+      {
+        "lower_kmh": 130.0,
+        "upper_kmh": 160.0,
+        "speed_kmh": 144.4352992,
+        "samples": 1540.0,
+        "lateral_r2": 0.9756980966364124,
+        "yaw_r2": 0.9715360613603683,
+        "c_lateral": 312.8348908757795,
+        "steer_lateral": 72.68205355217232,
+        "yaw_velocity": 42.362448492015496,
+        "yaw_damping": -241.01408251384623,
+        "steer_yaw": 43.0393073187665,
+        "steady_lateral_velocity_per_steer": -14.460854172225032,
+        "steady_yaw_rate_per_steer": 4.622433836024055,
+        "continuous_eigenvalues": [
+          [
+            -6.90267746246398,
+            6.4467996858868934
+          ],
+          [
+            -6.90267746246398,
+            -6.4467996858868934
+          ]
+        ],
+        "mean_abs_lateral_g": 0.3568360436435065,
+        "p95_abs_lateral_g": 0.6890230446999999
+      },
+      {
+        "lower_kmh": 160.0,
+        "upper_kmh": 200.0,
+        "speed_kmh": 174.88587245691383,
+        "samples": 1497.0,
+        "lateral_r2": 0.9892640597479602,
+        "yaw_r2": 0.951416276416501,
+        "c_lateral": 319.3788489288126,
+        "steer_lateral": 73.07960449087456,
+        "yaw_velocity": 43.19931121735828,
+        "yaw_damping": -241.90007093212003,
+        "steer_yaw": 42.90635873888399,
+        "steady_lateral_velocity_per_steer": -22.652715798024897,
+        "steady_yaw_rate_per_steer": 4.570572391337871,
+        "continuous_eigenvalues": [
+          [
+            -5.777371217925212,
+            6.524055056972775
+          ],
+          [
+            -5.777371217925212,
+            -6.524055056972775
+          ]
+        ],
+        "mean_abs_lateral_g": 0.4004575733600535,
+        "p95_abs_lateral_g": 0.6500915048000001
+      }
+    ]
+  },
+  "steering_calibration": {
+    "source": "logs\\manual_steering_calibration_highspeed.csv",
+    "valid_samples": 3332,
+    "intercept": 5.4943859151009224,
+    "slope": 0.0022192930070015714,
+    "k_steer_rad_per_axis": 0.5187112889480481,
+    "understeer_gradient": 0.0011511723362151746,
+    "fit_r2": 0.4403429505255948,
+    "bands": [
+      {
+        "lower_kmh": 20.0,
+        "upper_kmh": 40.0,
+        "samples": 328,
+        "median_k_steer": 0.5875881007563621,
+        "p10_k_steer": 0.5381614898877204,
+        "p90_k_steer": 0.6098116821386059
+      },
+      {
+        "lower_kmh": 40.0,
+        "upper_kmh": 65.0,
+        "samples": 68,
+        "median_k_steer": 0.5093560703522837,
+        "p10_k_steer": 0.3320985777344644,
+        "p90_k_steer": 0.6841616046526722
+      },
+      {
+        "lower_kmh": 65.0,
+        "upper_kmh": 100.0,
+        "samples": 398,
+        "median_k_steer": 0.513386913777583,
+        "p10_k_steer": 0.38803948910334046,
+        "p90_k_steer": 0.7956580243036133
+      },
+      {
+        "lower_kmh": 100.0,
+        "upper_kmh": 160.0,
+        "samples": 827,
+        "median_k_steer": 0.5558162300694215,
+        "p10_k_steer": 0.36599092064603744,
+        "p90_k_steer": 0.7283643639352301
+      },
+      {
+        "lower_kmh": 160.0,
+        "upper_kmh": 260.0,
+        "samples": 1703,
+        "median_k_steer": 0.5497143113669113,
+        "p10_k_steer": 0.4119800259123569,
+        "p90_k_steer": 0.6832597508168958
+      }
+    ]
+  },
+  "coupled_speed_planning": {
+    "coupling": [
+      "curvature and grip cap the speed envelope",
+      "high-speed response time advances braking",
+      "lateral load and steering scale the braking capability and MPC effort",
+      "longitudinal MPC generates acceleration; pedal map applies rate and slip limits",
+      "vehicle speed and lateral acceleration feed back to the next planning cycle"
+    ]
+  }
+}

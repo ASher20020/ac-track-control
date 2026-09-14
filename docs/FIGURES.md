@@ -55,9 +55,40 @@ maps and closed-loop validation separate.
 
 ![Formula overview page 2](../assets/figures/mpc_equations_page-2.png)
 
+![Linear model and actuator augmentation](../assets/figures/mpc_equations_page-3.png)
+
 The equations are typeset with LaTeX, equation numbering and standard academic
 math spacing. The source is `docs/assets/mpc_equations.tex` and the compiled PDF
 is `docs/assets/build/mpc_equations.pdf`.
+
+## Weight scheduling
+
+![MPC weight scheduling](../assets/figures/weight_schedules.png)
+
+The figure shows the speed and lateral-load multipliers applied to the state,
+steering, acceleration and jerk costs.
+
+## Model identification
+
+![Speed-banded model identification](../assets/figures/model_identification.png)
+
+Coefficients are fitted independently in five speed bands. The figure also
+shows the sample count and the lateral/yaw fit quality.
+
+## Steering calibration
+
+![Steering calibration](../assets/figures/steering_calibration.png)
+
+The left panel fits the steady-state steering relation. The right panel shows
+the steering-axis scale by speed band and the global fitted scale.
+
+## Coupled speed planning
+
+![Coupled speed planning](../assets/figures/coupled_speed_planning.png)
+
+The planner and both MPC layers exchange speed, curvature and lateral-load
+constraints. The diagram makes clear that this is coordinated planning rather
+than one monolithic joint lateral-longitudinal NLP.
 
 ## Human comparison
 
