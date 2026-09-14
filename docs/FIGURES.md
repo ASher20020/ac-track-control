@@ -28,9 +28,10 @@ layer can be replaced independently.
 
 ![Track trajectories](../assets/figures/track_maps.png)
 
-Human reference traces are shown in grey. Automatic traces are colored by
-speed. The automatic comparison uses the verified V63 Shanghai lap and V59
-Zhejiang lap.
+The trajectory uses the complete `fast_lane.ai` geometry for each track.
+Automatic speed is colored along the path. Human lap times remain the
+reference labels; the detailed human-versus-auto speed traces appear in the
+comparison figures below.
 
 ## Performance dashboard
 

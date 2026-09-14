@@ -11,6 +11,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.patches import Circle, FancyArrowPatch, FancyBboxPatch
 
+from actc.track import TrackPath, resolve_fast_lane
 from tools.build_comparison_figures import (
     find_auto_fastest_lap,
     find_manual_fastest_lap,
@@ -159,9 +160,18 @@ def _draw_speed_track(
     norm: Normalize,
     linewidth: float = 2.5,
     alpha: float = 1.0,
+    close: bool = False,
 ) -> LineCollection:
-    closed_points = np.vstack([points, points[0]])
-    closed_speed = np.concatenate([speed_kmh, speed_kmh[:1]])
+    closed_points = (
+        np.vstack([points, points[0]])
+        if close
+        else points
+    )
+    closed_speed = (
+        np.concatenate([speed_kmh, speed_kmh[:1]])
+        if close
+        else speed_kmh
+    )
     segments = np.stack(
         [closed_points[:-1], closed_points[1:]],
         axis=1,
@@ -180,12 +190,57 @@ def _draw_speed_track(
     return collection
 
 
+def _load_track_path(track_name: str, configuration: str = "") -> TrackPath:
+    fast_lane = resolve_fast_lane(track_name, configuration)
+    return TrackPath.load(
+        fast_lane,
+        centerline=True,
+        preserve_fast_lane=True,
+        max_speed_kmh=300.0,
+        min_speed_kmh=25.0,
+        lateral_accel_mps2=6.867,
+        accel_mps2=3.924,
+        brake_mps2=14.0,
+    ).resampled(2.0)
+
+
+def _speed_on_path(
+    frame: pd.DataFrame,
+    path: TrackPath,
+) -> np.ndarray:
+    count = len(path.points)
+    indices = np.rint(
+        frame["normalized_position"].to_numpy(dtype=float) * count
+    ).astype(int) % count
+    values = frame["speed_kmh"].to_numpy(dtype=float)
+    grouped = pd.Series(values).groupby(indices).median()
+    speed = np.full(count, np.nan, dtype=float)
+    speed[grouped.index.to_numpy(dtype=int)] = grouped.to_numpy(dtype=float)
+    missing = ~np.isfinite(speed)
+    if np.any(missing):
+        known = np.flatnonzero(~missing)
+        if known.size < 2:
+            return np.full(count, float(np.nanmedian(speed)), dtype=float)
+        extended_index = np.concatenate(
+            [known - count, known, known + count]
+        )
+        extended_speed = np.concatenate(
+            [speed[known], speed[known], speed[known]]
+        )
+        speed = np.interp(
+            np.arange(count, dtype=float),
+            extended_index,
+            extended_speed,
+        )
+    return speed
+
+
 def build_hero() -> None:
-    path = PROJECT_ROOT / "logs" / "lmpc_nordschleife_v2_safe.csv"
-    _, lap = _load_fastest_lap(path, automatic=True)
-    center, basis = _map_transform([lap])
-    points = _transform_points(lap, center, basis)
-    speed = lap["speed_kmh"].to_numpy(dtype=float)
+    log_path = PROJECT_ROOT / "logs" / "lmpc_nordschleife_v2_safe.csv"
+    _, lap = _load_fastest_lap(log_path, automatic=True)
+    track_path = _load_track_path("ks_nordschleife", "nordschleife")
+    points = np.asarray(track_path.points, dtype=float)
+    speed = _speed_on_path(lap, track_path)
     points = points / 1000.0
 
     fig, ax = plt.subplots(figsize=(16, 7.4), facecolor=COLORS["navy"])
@@ -307,6 +362,7 @@ def build_hero() -> None:
         speed,
         norm=norm,
         linewidth=4.0,
+        close=True,
     )
     map_ax.scatter(
         [map_points[0, 0]],
@@ -348,6 +404,8 @@ def build_track_maps() -> None:
             "human_label": "Human 136.248 s",
             "auto_label": "Auto 143.543 s",
             "color": COLORS["blue"],
+            "track_name": "tr_shanghai",
+            "configuration": "advanced",
         },
         {
             "name": "Zhejiang",
@@ -356,6 +414,8 @@ def build_track_maps() -> None:
             "human_label": "Human 94.329 s",
             "auto_label": "Auto 103.764 s",
             "color": COLORS["green"],
+            "track_name": "st_zhejiang",
+            "configuration": "layout_main",
         },
         {
             "name": "Nordschleife",
@@ -364,6 +424,8 @@ def build_track_maps() -> None:
             "human_label": "",
             "auto_label": "Auto 526.825 s",
             "color": COLORS["orange"],
+            "track_name": "ks_nordschleife",
+            "configuration": "nordschleife",
         },
     ]
 
@@ -382,17 +444,25 @@ def build_track_maps() -> None:
             Path(spec["auto_path"]),
             automatic=True,
         )
-        frames = [auto_lap]
+        track_path = _load_track_path(
+            str(spec["track_name"]),
+            str(spec["configuration"]),
+        )
+        path_points = np.asarray(track_path.points, dtype=float)
+        auto_speed = _speed_on_path(auto_lap, track_path)
+        frames = [pd.DataFrame(path_points, columns=["position_x", "position_z"])]
         human_lap = None
         if spec["human_path"] is not None:
             _, human_lap = _load_fastest_lap(
                 Path(spec["human_path"]),
                 automatic=False,
             )
-            frames.append(human_lap)
-        center, basis = _map_transform(frames)
-        auto_points = _transform_points(auto_lap, center, basis)
-        auto_speed = auto_lap["speed_kmh"].to_numpy(dtype=float)
+        if spec["name"] == "Nordschleife":
+            center = np.zeros(2, dtype=float)
+            basis = np.eye(2, dtype=float)
+        else:
+            center, basis = _map_transform(frames)
+        auto_points = (path_points - center) @ basis
 
         ax.set_facecolor(COLORS["white"])
         for spine in ax.spines.values():
@@ -402,11 +472,9 @@ def build_track_maps() -> None:
 
         all_points = [auto_points]
         if human_lap is not None:
-            human_points = _transform_points(human_lap, center, basis)
-            all_points.append(human_points)
             ax.plot(
-                human_points[:, 0],
-                human_points[:, 1],
+                auto_points[:, 0],
+                auto_points[:, 1],
                 color="#BCC6D4",
                 linewidth=1.35,
                 alpha=0.85,
@@ -428,6 +496,7 @@ def build_track_maps() -> None:
             auto_speed,
             norm=norm,
             linewidth=2.4,
+            close=True,
         )
         ax.scatter(
             [auto_points[0, 0]],
