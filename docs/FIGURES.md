@@ -29,9 +29,11 @@ layer can be replaced independently.
 ![Track trajectories](../assets/figures/track_maps.png)
 
 The trajectory uses the complete `fast_lane.ai` geometry for each track.
-Automatic speed is colored along the path. Human lap times remain the
-reference labels; the detailed human-versus-auto speed traces appear in the
-comparison figures below.
+Automatic speed is mapped to the path by continuous world-coordinate
+projection, not by directly indexing `normalized_position`. The color scale is
+fixed at `0-300 km/h`, which avoids distorting the low-speed sections and keeps
+all three tracks comparable. Human lap times remain the reference labels; the
+detailed human-versus-auto speed traces appear in the comparison figures below.
 
 ## Performance dashboard
 
