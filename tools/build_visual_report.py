@@ -215,9 +215,20 @@ def _speed_on_path(
     path: TrackPath,
 ) -> np.ndarray:
     count = len(path.points)
-    indices = np.rint(
-        frame["normalized_position"].to_numpy(dtype=float) * count
-    ).astype(int) % count
+    coordinates = frame[
+        ["position_x", "position_z"]
+    ].to_numpy(dtype=float)
+    indices: list[int] = []
+    previous_index: int | None = None
+    for x, z in coordinates:
+        index, _fraction, _px, _pz, _heading, _curvature = path.project(
+            float(x),
+            float(z),
+            previous_index,
+        )
+        indices.append(index % count)
+        previous_index = index
+    indices = np.asarray(indices, dtype=int)
     values = frame["speed_kmh"].to_numpy(dtype=float)
     grouped = pd.Series(values).groupby(indices).median()
     speed = np.full(count, np.nan, dtype=float)
@@ -361,7 +372,7 @@ def build_hero() -> None:
     map_points[:, 1] -= np.mean(map_points[:, 1])
     map_points /= max(np.ptp(map_points[:, 0]), np.ptp(map_points[:, 1]))
 
-    norm = Normalize(vmin=float(np.percentile(speed, 5)), vmax=float(speed.max()))
+    norm = Normalize(vmin=0.0, vmax=300.0)
     _draw_speed_track(
         map_ax,
         map_points,
@@ -392,6 +403,22 @@ def build_hero() -> None:
     map_ax.set_ylim(map_points[:, 1].min() - 0.06, map_points[:, 1].max() + 0.06)
     map_ax.set_aspect("equal")
     map_ax.axis("off")
+
+    colorbar_ax = fig.add_axes([0.57, 0.075, 0.34, 0.018])
+    scalar = plt.cm.ScalarMappable(norm=norm, cmap=SPEED_CMAP)
+    scalar.set_array([])
+    colorbar = fig.colorbar(
+        scalar,
+        cax=colorbar_ax,
+        orientation="horizontal",
+    )
+    colorbar.set_label(
+        "speed [km/h]",
+        color="#8BA9BB",
+        fontsize=8.5,
+    )
+    colorbar.ax.tick_params(colors="#8BA9BB", labelsize=8)
+    colorbar.outline.set_edgecolor("#28445D")
 
     fig.savefig(
         FIGURE_DIR / "hero_overview.png",
