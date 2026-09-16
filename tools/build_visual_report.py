@@ -234,7 +234,11 @@ def _speed_on_path(
 
 
 def build_hero() -> None:
-    log_path = PROJECT_ROOT / "logs" / "lmpc_nordschleife_v2_safe.csv"
+    log_path = (
+        PROJECT_ROOT
+        / "logs"
+        / "lmpc_nordschleife_frenet_refine_103_sync_replay.csv"
+    )
     _, lap = _load_fastest_lap(log_path, automatic=True)
     track_path = _load_track_path("ks_nordschleife", "nordschleife")
     points = np.asarray(track_path.points, dtype=float)
@@ -333,7 +337,7 @@ def build_hero() -> None:
     ax.text(
         0.82,
         3.05,
-        "Auto 8:46.825",
+        "Auto 7:52.546",
         fontsize=31,
         fontweight="bold",
         color="#F1A24B",
@@ -341,7 +345,7 @@ def build_hero() -> None:
     ax.text(
         0.85,
         2.58,
-        "Human 7:17.632  |  Gap +1:29.193  |  0 tyres out",
+        "Human 7:17.632  |  Gap +34.914  |  2 tyres out",
         fontsize=10.5,
         color="#C1D6E1",
     )
@@ -414,9 +418,9 @@ def build_track_maps() -> None:
         {
             "name": "Shanghai",
             "human_path": PROJECT_ROOT / "logs" / "vehicle_dynamics_reference_20min.csv",
-            "auto_path": PROJECT_ROOT / "logs" / "lmpc_shanghai_v63_h50dt05_265_5lap.csv",
+            "auto_path": PROJECT_ROOT / "logs" / "lmpc_shanghai_frenet_refine_103_latest_local_line60.csv",
             "human_label": f"Human {_format_lap_time(136.247968)}",
-            "auto_label": f"Auto {_format_lap_time(143.542842)}",
+            "auto_label": f"Auto {_format_lap_time(134.399)}",
             "color": COLORS["blue"],
             "track_name": "tr_shanghai",
             "configuration": "advanced",
@@ -424,9 +428,9 @@ def build_track_maps() -> None:
         {
             "name": "Zhejiang",
             "human_path": PROJECT_ROOT / "logs" / "manual_reference_v49_moza.csv",
-            "auto_path": PROJECT_ROOT / "logs" / "lmpc_v59_rollback_5lap.csv",
+            "auto_path": PROJECT_ROOT / "logs" / "lmpc_zhejiang_refine_103_brake130_fastfall_cap17_acc_cal_local055.csv",
             "human_label": f"Human {_format_lap_time(94.328507)}",
-            "auto_label": f"Auto {_format_lap_time(103.764338)}",
+            "auto_label": f"Auto {_format_lap_time(96.245)}",
             "color": COLORS["green"],
             "track_name": "st_zhejiang",
             "configuration": "layout_main",
@@ -434,9 +438,9 @@ def build_track_maps() -> None:
         {
             "name": "Nordschleife",
             "human_path": None,
-            "auto_path": PROJECT_ROOT / "logs" / "lmpc_nordschleife_v2_safe.csv",
+            "auto_path": PROJECT_ROOT / "logs" / "lmpc_nordschleife_frenet_refine_103_sync_replay.csv",
             "human_label": f"Human {_format_lap_time(437.632)}",
-            "auto_label": f"Auto {_format_lap_time(526.824546)}",
+            "auto_label": f"Auto {_format_lap_time(472.546)}",
             "color": COLORS["orange"],
             "track_name": "ks_nordschleife",
             "configuration": "nordschleife",
@@ -602,20 +606,20 @@ def build_performance_dashboard() -> None:
 
     ax_gap = fig.add_subplot(grid[0, 0])
     tracks = ["Shanghai", "Zhejiang"]
-    gaps = [7.295, 9.436]
+    gaps = [-1.849, 1.917]
     colors = [COLORS["blue"], COLORS["green"]]
     bars = ax_gap.barh(tracks, gaps, color=colors, height=0.48)
     for bar, gap in zip(bars, gaps):
         ax_gap.text(
             gap + 0.12,
             bar.get_y() + bar.get_height() / 2,
-            f"+{gap:.3f} s",
+            f"{gap:+.3f} s",
             va="center",
             color=COLORS["ink"],
             fontsize=11,
             fontweight="bold",
         )
-    ax_gap.set_xlim(0, 11)
+    ax_gap.set_xlim(-3, 12)
     ax_gap.set_title(
         "Gap to human teaching lap",
         loc="left",
@@ -623,13 +627,13 @@ def build_performance_dashboard() -> None:
         fontweight="bold",
         color=COLORS["ink"],
     )
-    ax_gap.set_xlabel("seconds slower")
+    ax_gap.set_xlabel("seconds versus human")
     ax_gap.grid(axis="x", color=COLORS["grid"], alpha=0.8)
     ax_gap.set_axisbelow(True)
 
     ax_track = fig.add_subplot(grid[0, 1])
     error_tracks = ["Shanghai", "Zhejiang", "Nordschleife"]
-    errors = [0.566, 0.535, 0.461]
+    errors = [1.866, 1.472, 1.185]
     bars = ax_track.barh(
         error_tracks,
         errors,
@@ -653,7 +657,7 @@ def build_performance_dashboard() -> None:
             fontsize=10.5,
             fontweight="bold",
         )
-    ax_track.set_xlim(0, 0.72)
+    ax_track.set_xlim(0, 2.1)
     ax_track.set_title(
         "p95 absolute lateral tracking error",
         loc="left",
@@ -674,7 +678,7 @@ def build_performance_dashboard() -> None:
         "Zhejiang\nauto",
         "Nordschleife\nauto",
     ]
-    speeds = [273.2, 268.7, 239.4, 229.2, 293.8]
+    speeds = [273.2, 272.3, 239.4, 237.7, 296.7]
     speed_colors = [
         "#8AA8D8",
         COLORS["blue"],
@@ -717,8 +721,8 @@ def build_performance_dashboard() -> None:
             0.46,
             0.40,
             "Shanghai",
-            "0 tyres out",
-            "V63 verified / V64 candidate",
+            "1 tyre out",
+            "local-line60 candidate",
             COLORS["blue"],
         ),
         (
@@ -727,8 +731,8 @@ def build_performance_dashboard() -> None:
             0.46,
             0.40,
             "Zhejiang",
-            "4 complete laps",
-            "lap spread about 27 ms",
+            "2 tyres out",
+            "local055; 103 weights",
             COLORS["green"],
         ),
         (
@@ -737,8 +741,8 @@ def build_performance_dashboard() -> None:
             0.46,
             0.40,
             "Nordschleife",
-            "0 tyres out",
-            "first full stable lap",
+            "2 tyres out",
+            "corrected 7:52.546",
             COLORS["orange"],
         ),
         (

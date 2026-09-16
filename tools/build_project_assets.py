@@ -522,37 +522,37 @@ def build_track_results() -> None:
         {
             "name": "Shanghai",
             "length": "5.43 km",
-            "lap": 143.542842,
-            "label": "2:23.543",
+            "lap": 134.399,
+            "label": "2:14.399",
             "human": "2:16.248",
-            "status": "V63 verified; V64 final candidate",
-            "max_speed": 268.726,
-            "lat": 0.566,
-            "tyres": 0,
+            "status": "local-line60; latest candidate",
+            "max_speed": 272.325,
+            "lat": 1.866,
+            "tyres": 1,
             "color": COLORS["blue"],
         },
         {
             "name": "Zhejiang",
             "length": "3.11 km",
-            "lap": 103.764338,
-            "label": "1:43.764",
+            "lap": 96.245,
+            "label": "1:36.245",
             "human": "1:34.329",
-            "status": "4 complete laps; 2 tyres out",
-            "max_speed": 229.152,
-            "lat": 0.530,
+            "status": "local055; 103 lateral weights",
+            "max_speed": 237.733,
+            "lat": 1.472,
             "tyres": 2,
             "color": COLORS["green"],
         },
         {
             "name": "Nordschleife",
             "length": "20.66 km",
-            "lap": 526.824546,
-            "label": "8:46.825",
+            "lap": 472.546,
+            "label": "7:52.546",
             "human": "7:17.632",
-            "status": "1 complete lap; zero tyres out",
-            "max_speed": 293.8,
-            "lat": 0.461,
-            "tyres": 0,
+            "status": "corrected crossing-to-crossing",
+            "max_speed": 296.703,
+            "lat": 1.185,
+            "tyres": 2,
             "color": COLORS["orange"],
         },
     ]
@@ -604,7 +604,11 @@ def build_track_results() -> None:
 
 
 def build_nordschleife_profile() -> None:
-    path = PROJECT_ROOT / "logs" / "lmpc_nordschleife_v2_safe.csv"
+    path = (
+        PROJECT_ROOT
+        / "logs"
+        / "lmpc_nordschleife_frenet_refine_103_sync_replay.csv"
+    )
     if not path.exists():
         return
     distance: list[float] = []
@@ -663,7 +667,7 @@ def build_nordschleife_profile() -> None:
     axes[0].legend(loc="upper right", ncol=3)
     axes[0].grid(color=COLORS["grid"], alpha=0.7)
     axes[0].set_title(
-        "Nordschleife V2 safe: one complete lap, zero tyres out",
+        "Nordschleife 103 sync: corrected 7:52.546 crossing-to-crossing",
         loc="left",
         fontsize=18,
         fontweight="bold",
