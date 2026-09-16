@@ -42,6 +42,30 @@ detailed human-versus-auto speed traces appear in the comparison figures below.
 The dashboard summarizes the lap-time gap, p95 tracking error, peak speed and
 the strongest evidence for each closed-loop run.
 
+## Latest validated configurations
+
+![Latest validated configurations](../assets/figures/latest_track_results.png)
+
+The latest Shanghai, Zhejiang and corrected Nordschleife results use the 103
+lateral weights, measured acceleration envelope and reachable planning-brake
+envelope.
+
+## Zhejiang lateral calibration
+
+![Zhejiang lateral calibration](../assets/figures/lateral_calibration_zhejiang.png)
+
+Normalized V6-to-V7 comparison. Higher heading/yaw weights with lower lateral
+and lateral-velocity demand sharply reduced yaw error and raw steering
+activity while preserving or slightly improving lateral RMS.
+
+## Longitudinal braking upgrade
+
+![Longitudinal braking upgrade](../assets/figures/longitudinal_braking_upgrade.png)
+
+The upgrade separates the planning deceleration used for braking distance from
+the larger command limit used to saturate the brake pedal. The final runs reach
+`0.91-1.00` maximum brake command instead of remaining near `0.58`.
+
 ## Calibration pipeline
 
 ![Calibration pipeline](../assets/figures/calibration_pipeline.png)

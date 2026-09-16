@@ -17,7 +17,16 @@
         "The verified best lap used V63 with a 265 km/h cap.",
         "V64 is the retained final candidate with full braking and a 300 km/h cap.",
         "Use the V63 comparison figure when citing the 143.543 s result."
-      ]
+      ],
+      "latest_candidate": {
+        "status": "user_confirmed",
+        "config": "configs/final/shanghai_frenet_local_line60_perfect.json",
+        "run_record": "configs/final/shanghai_frenet_local_line60_perfect_run.json",
+        "line_offset_envelope": "configs/line_offsets/shanghai_local_two_corners.json",
+        "speed_envelope": "configs/speed_envelopes/shanghai_local_60s.json",
+        "lap_time_s": 134.469,
+        "max_tyres_out": 1
+      }
     },
     "zhejiang": {
       "status": "synchronized_longitudinal_candidate",
@@ -45,7 +54,16 @@
         "The final config keeps the Zhejiang-specific speed scaling.",
         "Its longitudinal MPC section is synchronized with Shanghai.",
         "The synchronized 50 x 0.05 s setup has not yet been re-run end-to-end."
-      ]
+      ],
+      "optimized_local055": {
+        "status": "user_confirmed_perfect_lap",
+        "saved_on": "2026-09-16",
+        "config": "configs/final/zhejiang_frenet_local055_perfect.json",
+        "run_record": "configs/final/zhejiang_frenet_local055_perfect_run.json",
+        "speed_envelope": "configs/speed_envelopes/zhejiang_local_055.json",
+        "log": "logs/lmpc_zhejiang_refine_103_brake130_fastfall_cap17_acc_cal_local055.csv",
+        "lap_summary": "logs/lmpc_zhejiang_refine_103_brake130_fastfall_cap17_acc_cal_local055_laps.jsonl"
+      }
     },
     "nordschleife": {
       "status": "safe_candidate",
@@ -67,7 +85,31 @@
       "notes": [
         "This is the safe candidate, not the final lap-time optimized version.",
         "The lap is the first complete Nordschleife run with zero tyres out."
-      ]
+      ],
+      "refine_103_sync": {
+        "status": "verified_corrected_lap",
+        "config": "configs/final/nordschleife_frenet_refine_103_sync.json",
+        "launcher": "tools/start_nordschleife_refine_103_sync.ps1",
+        "corrected_lap_time_s": 472.546,
+        "pre_line_launch_s": 15.341,
+        "logged_lap_time_s": 487.891,
+        "max_tyres_out": 2
+      },
+      "candidate_v2": {
+        "status": "pending_test",
+        "config": "configs/final/nordschleife_frenet_refine_103_candidate_v2.json",
+        "run_record": "configs/final/nordschleife_frenet_refine_103_candidate_v2_run.json",
+        "line_offset_envelope": "configs/line_offsets/nordschleife_candidate_v2.json",
+        "speed_envelope": "configs/speed_envelopes/nordschleife_candidate_v2.json"
+      }
+    }
+  },
+  "reusable_presets": {
+    "frenet_085": {
+      "path": "configs/presets/frenet_085_preset.json",
+      "status": "frozen",
+      "description": "Frenet controller, longitudinal MPC and 0.85g planning preset; excludes track speed scaling.",
+      "source_config": "configs/final/zhejiang_frenet_v9_lat085.json"
     }
   }
 }

@@ -119,7 +119,7 @@ def build_comparison(
         minimum_duration_s=60.0,
         maximum_duration_s=300.0,
     )
-    auto_time, auto_lap = find_auto_fastest_lap(
+    auto_time, auto_lap = find_manual_fastest_lap(
         auto,
         minimum_duration_s=60.0,
         maximum_duration_s=700.0,
@@ -317,7 +317,7 @@ def main() -> int:
             "auto_path": (
                 PROJECT_ROOT
                 / "logs"
-                / "lmpc_shanghai_v63_h50dt05_265_5lap.csv"
+                / "lmpc_shanghai_frenet_refine_103_latest_local_line60.csv"
             ),
             "track_length_m": 5426.853590742263,
             "figure": "comparison_shanghai.png",
@@ -333,7 +333,7 @@ def main() -> int:
             "auto_path": (
                 PROJECT_ROOT
                 / "logs"
-                / "lmpc_v59_rollback_5lap.csv"
+                / "lmpc_zhejiang_refine_103_brake130_fastfall_cap17_acc_cal_local055.csv"
             ),
             "track_length_m": 3114.099017702242,
             "figure": "comparison_zhejiang.png",

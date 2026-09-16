@@ -130,12 +130,17 @@ def simulate(
                 heading_sign=1.0,
             )
         )
-    elif controller_name == "lmpc":
+    elif controller_name in {"lmpc", "lmpc-cartesian"}:
         controller = LinearMpcController(
             MpcConfig(
                 horizon=20,
                 dt=dt,
                 solve_time_budget_ms=solver_budget_ms,
+                coordinate_frame=(
+                    "cartesian"
+                    if controller_name == "lmpc-cartesian"
+                    else "frenet"
+                ),
             )
         )
     elif controller_name == "nmpc":
@@ -320,7 +325,7 @@ def main() -> int:
     parser.add_argument("--max-seconds", type=float, default=600.0)
     parser.add_argument(
         "--controller",
-        choices=("stanley", "lqr", "lmpc", "nmpc"),
+        choices=("stanley", "lqr", "lmpc", "lmpc-cartesian", "nmpc"),
         default="lqr",
     )
     parser.add_argument("--cross-gain", type=float, default=0.50)

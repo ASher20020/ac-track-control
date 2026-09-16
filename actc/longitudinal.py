@@ -6,6 +6,11 @@ import numpy as np
 import osqp
 from scipy import sparse
 
+from .capabilities import (
+    acceleration_capability_mps2,
+    braking_capability_mps2,
+)
+
 
 def clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
@@ -660,20 +665,6 @@ class LongitudinalMpcController:
             iterations=int(result.info.iter),
         )
         return result_value
-
-
-def acceleration_capability_mps2(speed_mps: float) -> float:
-    speed_kmh = max(0.0, speed_mps * 3.6)
-    breakpoints = (0.0, 50.0, 100.0, 150.0, 220.0)
-    values = (5.0, 4.0, 3.2, 2.8, 2.2)
-    return float(np.interp(speed_kmh, breakpoints, values))
-
-
-def braking_capability_mps2(speed_mps: float) -> float:
-    speed_kmh = max(0.0, speed_mps * 3.6)
-    breakpoints = (0.0, 60.0, 100.0, 160.0, 220.0, 280.0)
-    values = (11.0, 12.5, 14.0, 15.5, 17.0, 17.5)
-    return float(np.interp(speed_kmh, breakpoints, values))
 
 
 def brake_command_for_deceleration(

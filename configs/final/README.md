@@ -1,13 +1,13 @@
 # Final configuration set
 
-The three JSON files in this directory are the frozen configuration entry
-points for the project:
+The current configuration entry points are:
 
 | Track | File | Status |
 | --- | --- | --- |
-| Shanghai | `shanghai_final.json` | V64 final candidate; verified comparison baseline is V63 |
-| Zhejiang | `zhejiang_final.json` | V59 speed strategy with Shanghai longitudinal MPC parameters |
-| Nordschleife | `nordschleife_candidate_v2_safe.json` | Safe candidate retained for further validation |
+| Shanghai | `shanghai_frenet_local_line60_perfect.json` | User-confirmed 134.469 s lap with local line and speed offsets |
+| Zhejiang | `zhejiang_frenet_local055_perfect.json` | User-confirmed 96.282 s run with final 103 lateral weights |
+| Nordschleife | `nordschleife_frenet_refine_103_sync.json` | Corrected 7:52.546 crossing-to-crossing run |
+| Nordschleife | `nordschleife_frenet_refine_103_candidate_v2.json` | Pending two-corner local correction candidate |
 
 Use `manifest.json` for the exact source logs, lap times and runtime overrides.
 The shared identified vehicle model is stored at

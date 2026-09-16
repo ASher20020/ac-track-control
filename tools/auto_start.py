@@ -45,6 +45,7 @@ def build_command(
     friction_ellipse_planning: bool = False,
     path_resample_spacing_m: float = 0.0,
     line_target_clearance_m: float = 0.0,
+    line_offset_envelope: Path | None = None,
     offtrack_limit_m: float = 12.0,
     longitudinal_controller: str = "pi",
     merge_speed_kmh: float = 80.0,
@@ -56,6 +57,9 @@ def build_command(
     speed_envelope_scale: float = 0.95,
     speed_envelope_only_increase: bool = True,
     autotune: bool = True,
+    lateral_scan: bool = False,
+    lateral_refine: bool = False,
+    speed_calibration: bool = False,
 ) -> list[str]:
     command = [
         sys.executable,
@@ -106,6 +110,14 @@ def build_command(
         str(path_resample_spacing_m),
         "--line-target-clearance-m",
         str(line_target_clearance_m),
+        *(
+            [
+                "--line-offset-envelope",
+                str(line_offset_envelope),
+            ]
+            if line_offset_envelope is not None
+            else []
+        ),
         "--offtrack-limit-m",
         str(offtrack_limit_m),
         "--target-rise-kmh-s",
@@ -157,6 +169,12 @@ def build_command(
     ]
     if autotune:
         command.append("--autotune")
+    if lateral_scan:
+        command.append("--lateral-scan")
+    if lateral_refine:
+        command.append("--lateral-refine")
+    if speed_calibration:
+        command.append("--speed-calibration")
     if speed_envelope is not None:
         command.extend(
             [
@@ -326,6 +344,11 @@ def main() -> int:
         default=0.0,
     )
     parser.add_argument(
+        "--line-offset-envelope",
+        type=Path,
+        default=None,
+    )
+    parser.add_argument(
         "--offtrack-limit-m",
         type=float,
         default=12.0,
@@ -367,6 +390,21 @@ def main() -> int:
         "--autotune",
         action=argparse.BooleanOptionalAction,
         default=True,
+    )
+    parser.add_argument(
+        "--lateral-scan",
+        action="store_true",
+        help="Run the fixed 20-candidate lateral MPC scan.",
+    )
+    parser.add_argument(
+        "--lateral-refine",
+        action="store_true",
+        help="Run the 11-lap adaptive lateral MPC refinement.",
+    )
+    parser.add_argument(
+        "--speed-calibration",
+        action="store_true",
+        help="Run the 10-lap monotonic speed-scale calibration.",
     )
     parser.add_argument(
         "--log",
@@ -472,6 +510,7 @@ def main() -> int:
             friction_ellipse_planning=args.friction_ellipse_planning,
             path_resample_spacing_m=args.path_resample_spacing_m,
             line_target_clearance_m=args.line_target_clearance_m,
+            line_offset_envelope=args.line_offset_envelope,
             offtrack_limit_m=args.offtrack_limit_m,
             longitudinal_controller=args.longitudinal_controller,
             merge_speed_kmh=args.merge_speed_kmh,
@@ -485,6 +524,9 @@ def main() -> int:
                 args.speed_envelope_only_increase
             ),
             autotune=args.autotune,
+            lateral_scan=args.lateral_scan,
+            lateral_refine=args.lateral_refine,
+            speed_calibration=args.speed_calibration,
         )
         print("starting:", " ".join(command), flush=True)
         return subprocess.call(command, cwd=PROJECT_ROOT)

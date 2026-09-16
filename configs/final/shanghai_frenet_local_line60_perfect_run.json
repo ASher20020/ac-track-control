@@ -1,0 +1,17 @@
+{
+  "saved_on": "2026-09-16",
+  "status": "user_confirmed_perfect_lap",
+  "track": "tr_shanghai",
+  "config": "configs/final/shanghai_frenet_local_line60_perfect.json",
+  "line_offset_envelope": "configs/line_offsets/shanghai_local_two_corners.json",
+  "speed_envelope": "configs/speed_envelopes/shanghai_local_60s.json",
+  "log": "logs/lmpc_shanghai_frenet_refine_103_latest_local_line60.csv",
+  "lap_summary": "logs/lmpc_shanghai_frenet_refine_103_latest_local_line60_laps.jsonl",
+  "verified_lap": {
+    "lap_number": 2,
+    "lap_time_s": 134.469,
+    "p95_lateral_error_m": 1.923,
+    "p95_heading_error_rad": 0.0796,
+    "max_tyres_out": 1
+  }
+}

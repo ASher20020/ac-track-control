@@ -8,33 +8,57 @@ number has a corresponding source path in `configs/final/manifest.json`.
 
 | Track | Human teaching lap | Best automatic lap | Gap | Automatic max speed | Tyres out | Status |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Shanghai | 136.248 s | 143.543 s | +7.295 s | 268.7 km/h | 0 | V63 verification baseline; V64 final candidate retained |
-| Zhejiang | 94.329 s | 103.764 s | +9.436 s | 229.2 km/h | 2 | V59 speed strategy with Shanghai longitudinal MPC parameters |
-| Nordschleife | 7:17.632 | 8:46.825 | +1:29.193 | 293.8 km/h | 0 | V2 safe candidate, one complete lap |
+| Shanghai | 136.248 s | 134.399 s | -1.849 s | 300 km/h cap | 1 | local-line60 candidate |
+| Zhejiang | 94.329 s | 96.245 s | +1.917 s | 280 km/h cap | 2 | local055 user-confirmed candidate |
+| Nordschleife | 7:17.632 | 7:52.546 | +34.914 s | 300 km/h cap | 2 | corrected crossing-to-crossing result |
 
-![Verified results](../assets/figures/track_results.png)
+![Latest validated configurations](../assets/figures/latest_track_results.png)
+
+![Zhejiang lateral calibration](../assets/figures/lateral_calibration_zhejiang.png)
+
+![Longitudinal braking upgrade](../assets/figures/longitudinal_braking_upgrade.png)
+
+## Latest configuration decisions
+
+All three current candidates share:
+
+- Frenet lateral MPC with the final 103 weights.
+- Measured acceleration capability from the P90 envelope.
+- Planning braking separated from the command brake limit.
+- `target_fall_kmh_s=188`.
+- Longitudinal MPC `q_speed=30`, `r_accel=0.30`, `r_jerk=20`.
+
+Lateral weights:
+
+```text
+q_lateral = 11.5
+q_heading = 135.0
+q_lateral_velocity = 3.5
+q_yaw_rate = 28.0
+r_steer = 15.0
+rd_steer = 700.0
+```
+
+The planning brake boundary is capped at the smaller of the configured limit
+and the measured capability envelope. Control requests may exceed that value,
+which is what finally produced full brake-pedal usage.
 
 ## Shanghai
 
-The fastest verified automatic lap is `143.542842 s`, obtained with:
+The latest crossing-based automatic lap is `134.399 s`:
 
-- `lmpc_shanghai_v63_h50dt05_265_5lap.csv`
-- Historical verification config `lmpc_shanghai_v63_h50dt05_265.json`
-  (not distributed; the public final config is in `configs/final/`)
-- 265 km/h maximum speed
-- Longitudinal MPC horizon `50 x 0.05 s`
+- config `configs/final/shanghai_frenet_local_line60_perfect.json`
+- run record `configs/final/shanghai_frenet_local_line60_perfect_run.json`
+- line offsets `configs/line_offsets/shanghai_local_two_corners.json`
+- local speed envelope `configs/speed_envelopes/shanghai_local_60s.json`
+- maximum-speed cap `300 km/h`
+- p95 lateral error `1.923 m`
+- p95 heading error `0.0796 rad`
+- maximum tyres out `1`
 
-The retained final candidate is V64:
-
-- `configs/final/shanghai_final.json`
-- 300 km/h maximum speed
-- Full pre-reduction braking table
-- High-speed braking lead `0.004 s/(km/h)`
-
-V64 has one complete clean lap in the log at `159.736690 s`; that lap includes
-a low-speed/reset phase and is not a valid lap-time comparison against V63.
-The V64 configuration should be treated as the deployment candidate, while the
-V63 result is the verified comparison baseline.
+The run updates the previous V63 verification result of `143.543 s`. The main
+gain came from the lateral-weight refinement, full brake authority and two
+small track-local corrections rather than a global speed-scale increase.
 
 The Shanghai human-versus-auto comparison shows:
 
@@ -48,20 +72,20 @@ The Shanghai human-versus-auto comparison shows:
 
 ## Zhejiang
 
-The verified automatic lap is `103.764338 s` with V59:
+The latest crossing-based automatic lap is `96.245 s`:
 
-- Historical verification config `lmpc_zhejiang_manual_v59_microspeed.json`
-  (not distributed; the public final config is in `configs/final/`)
-- `lmpc_v59_rollback_5lap.csv`
-- Four complete laps between `103.764 s` and `103.791 s`
-- Maximum speed `229.2 km/h`
-- p95 lateral error `0.535 m`
+- config `configs/final/zhejiang_frenet_local055_perfect.json`
+- run record `configs/final/zhejiang_frenet_local055_perfect_run.json`
+- local speed envelope `configs/speed_envelopes/zhejiang_local_055.json`
+- p95 lateral error `1.532 m`
+- p95 heading error `0.104 rad`
+- maximum tyres out `2`
 
-The final configuration keeps the Zhejiang-specific speed scale table and
-synchronizes the longitudinal MPC section with Shanghai. The synchronized
-`50 x 0.05 s` configuration has not yet been re-run end-to-end, so the
-`103.764 s` result is the verification baseline rather than a measurement of
-the final synchronized file.
+The lateral-weight refinement reduced yaw-error P95 from `0.2672` to
+`0.1896 rad/s`, heading-error P95 from `0.1202` to `0.1040 rad`, and mean raw
+steering movement from `0.002993` to `0.001963`. The confirmed 103 candidate
+completed three repeated laps at `101.172`, `101.094` and `101.062 s` before
+the local055 speed-envelope version was retained.
 
 The Zhejiang comparison shows:
 
@@ -74,16 +98,22 @@ The Zhejiang comparison shows:
 
 ## Nordschleife
 
-The V2 safe candidate completed the first full Nordschleife lap without any
-tyre leaving the track:
+The current synchronized configuration completed a corrected
+crossing-to-crossing lap of `472.546 s`, about `7:52.546`:
 
-- Human reference lap: `437.632 s`, about `7:17.632`
-- Lap time: `526.824546 s`, about `8:46.82`
-- Gap to human: `89.193 s`, about `1:29.193`
-- Maximum speed: `293.8 km/h`
-- p95 lateral error: `0.461 m`
-- Maximum lateral error: `1.877 m`
-- Tyres out: `0`
+- config `configs/final/nordschleife_frenet_refine_103_sync.json`
+- launcher `tools/start_nordschleife_refine_103_sync.ps1`
+- first line crossing at `15.341 s` after controller start
+- finish crossing at `487.887 s` after controller start
+- corrected lap interval `472.546 s`
+- maximum tyres out `2`
+- p95 lateral error `1.185 m`
+- p95 heading error `0.0636 rad`
+
+The earlier `487.891 s` log value included the pre-line segment and must not be
+used as the lap time. A pending candidate v2 is saved in
+`configs/final/nordschleife_frenet_refine_103_candidate_v2.json` for two
+track-local corrections identified from the recorded lap.
 
 The remaining bottleneck is longitudinal execution, not lateral stability.
 High-speed speed deficits reached `50-87 km/h` at p95 in the main speed bands.

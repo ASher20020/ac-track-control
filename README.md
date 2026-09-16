@@ -39,28 +39,33 @@
 ## Verified results
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Shanghai-2%3A23.543-2166D5?style=flat-square" alt="Shanghai 2:23.543">
-  <img src="https://img.shields.io/badge/Zhejiang-1%3A43.764-25896D?style=flat-square" alt="Zhejiang 1:43.764">
-  <img src="https://img.shields.io/badge/Nordschleife-8%3A46.825-C44B3D?style=flat-square" alt="Nordschleife 8:46.825">
-  <img src="https://img.shields.io/badge/Shanghai%20tyres%20out-0-6B7280?style=flat-square" alt="Shanghai tyres out 0">
+  <img src="https://img.shields.io/badge/Shanghai-2%3A14.399-2166D5?style=flat-square" alt="Shanghai 2:14.399">
+  <img src="https://img.shields.io/badge/Zhejiang-1%3A36.245-25896D?style=flat-square" alt="Zhejiang 1:36.245">
+  <img src="https://img.shields.io/badge/Nordschleife-7%3A52.546-C44B3D?style=flat-square" alt="Nordschleife 7:52.546">
+  <img src="https://img.shields.io/badge/Shanghai%20tyres%20out-1-6B7280?style=flat-square" alt="Shanghai tyres out 1">
   <img src="https://img.shields.io/badge/Zhejiang%20tyres%20out-2-E17A2D?style=flat-square" alt="Zhejiang tyres out 2">
-  <img src="https://img.shields.io/badge/Nordschleife%20tyres%20out-0-6B7280?style=flat-square" alt="Nordschleife tyres out 0">
+  <img src="https://img.shields.io/badge/Nordschleife%20tyres%20out-2-E17A2D?style=flat-square" alt="Nordschleife tyres out 2">
 </p>
 
 | Track | Human | Auto | Gap | Auto max speed | Tyres out | Status |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Shanghai | 136.248 s | 143.543 s | +7.295 s | 268.7 km/h | 0 | V63 verified; V64 final candidate |
-| Zhejiang | 94.329 s | 103.764 s | +9.436 s | 229.2 km/h | 2 | V59 speed strategy; Shanghai longitudinal MPC synchronized |
-| Nordschleife | 7:17.632 | 8:46.825 | +1:29.193 | 293.8 km/h | 0 | V2 safe candidate |
+| Shanghai | 136.248 s | 134.399 s | -1.849 s | 300 km/h cap | 1 | local-line60 candidate |
+| Zhejiang | 94.329 s | 96.245 s | +1.917 s | 280 km/h cap | 2 | local055 user-confirmed candidate |
+| Nordschleife | 7:17.632 | 7:52.546 | +34.914 s | 300 km/h cap | 2 | corrected crossing-to-crossing result |
 
 ![Track results](assets/figures/track_results.png)
 
 ![Performance dashboard](assets/figures/performance_dashboard.png)
 
-The V64 Shanghai configuration and the synchronized Zhejiang configuration are
-the frozen deployment candidates. The lap-time evidence above comes from the
-corresponding verified baselines; see `configs/final/manifest.json` for the
-exact mapping.
+![Latest validated configurations](assets/figures/latest_track_results.png)
+
+![Zhejiang lateral calibration](assets/figures/lateral_calibration_zhejiang.png)
+
+![Longitudinal braking upgrade](assets/figures/longitudinal_braking_upgrade.png)
+
+The latest candidates combine the 103 lateral weights, measured acceleration
+envelope, reachable planning-brake envelope and isolated track-local speed or
+line offsets. See `configs/final/manifest.json` for exact run provenance.
 
 ## Visual overview
 
@@ -148,9 +153,12 @@ Read `docs/QUICKSTART.md` for the complete workflow.
 
 - The public repository excludes raw run logs and the vendored acados tree.
   The checked-in figures and manifest preserve the verified evidence.
-- Zhejiang has the final speed strategy and synchronized longitudinal MPC
-  parameters, but the synchronized `50 x 0.05 s` setup has not been re-run.
-- Nordschleife V2 is a safe candidate, not a lap-time-optimized final version.
+- The Nordschleife corrected time uses the crossing-to-crossing interval and
+  excludes the pre-line launch segment.
+- Track-local speed envelopes and line offsets are kept as separate assets and
+  must be supplied by the corresponding launcher.
+- Nordschleife candidate v2 remains pending test; the sync result is the
+  current verified run.
 - The project is simulator-only and is not a production vehicle controller.
 
 ## Project lineage

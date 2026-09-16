@@ -11,6 +11,7 @@ from actc.mpc import (
     MpcConfig,
     MpcVehicleParameters,
     NonlinearMpcController,
+    build_cartesian_reference_sequence,
     build_reference_sequence,
     vehicle_state_to_frenet,
 )
@@ -67,6 +68,24 @@ class MpcTests(unittest.TestCase):
         self.assertAlmostEqual(frenet[0], 0.2, places=6)
         self.assertAlmostEqual(frenet[1], 0.0, places=6)
 
+    def test_cartesian_reference_uses_ego_frame_contour_offset(self) -> None:
+        path = make_path()
+        state = make_state()
+        reference = build_cartesian_reference_sequence(
+            path,
+            0,
+            state,
+            horizon=10,
+            dt=0.02,
+        )
+        self.assertTrue((reference.states[:, 0] > 0.0).all())
+        self.assertAlmostEqual(
+            reference.states[0, 1],
+            -0.5,
+            places=6,
+        )
+        self.assertTrue((reference.states[:, 2] == 0.0).all())
+
     def test_curved_reference_has_yaw_but_zero_lateral_velocity(
         self,
     ) -> None:
@@ -108,6 +127,87 @@ class MpcTests(unittest.TestCase):
         self.assertTrue(math.isfinite(info.steer))
         self.assertLessEqual(abs(info.steer), 1.0)
         self.assertEqual(controller.last_stats.status, "solved")
+
+    def test_cartesian_linear_mpc_returns_finite_steering(self) -> None:
+        path = make_path()
+        state = make_state()
+        config = MpcConfig(
+            horizon=20,
+            dt=0.02,
+            coordinate_frame="cartesian",
+        )
+        controller = LinearMpcController(config)
+        controller.calibrate(state, path)
+        info = controller.step(state, path, config.dt)
+        self.assertTrue(math.isfinite(info.steer))
+        self.assertLessEqual(abs(info.steer), 1.0)
+        self.assertEqual(controller.last_stats.status, "solved")
+
+    def test_cartesian_cost_uses_path_normal_direction(self) -> None:
+        controller = LinearMpcController(
+            MpcConfig(
+                horizon=3,
+                dt=0.02,
+                coordinate_frame="cartesian",
+                q_longitudinal_position=1.0,
+                q_lateral=9.0,
+            )
+        )
+        q_matrix, _, _ = controller._cost_matrices_for_speeds(
+            np.asarray([10.0, 10.0, 10.0]),
+            np.asarray([0.0, 0.0, 0.0]),
+        )
+        q_dense = q_matrix.toarray()
+        self.assertAlmostEqual(q_dense[0, 0], 1.0, places=9)
+        self.assertAlmostEqual(q_dense[0, 1], 0.0, places=9)
+        self.assertAlmostEqual(q_dense[1, 1], 9.0, places=9)
+        self.assertAlmostEqual(q_dense[7, 7], 1.0, places=9)
+        self.assertAlmostEqual(q_dense[8, 8], 9.0, places=9)
+
+    def test_cartesian_prediction_includes_curvature_feedforward(
+        self,
+    ) -> None:
+        path = TrackPath.from_points(
+            [
+                (
+                    50.0 * math.cos(2.0 * math.pi * index / 120.0),
+                    50.0 * math.sin(2.0 * math.pi * index / 120.0),
+                )
+                for index in range(120)
+            ],
+            [40.0] * 120,
+        )
+        state = make_state()
+        state.position = (path.points[0][0], 0.0, path.points[0][1])
+        state.heading_rad = path.heading_rad[0] - math.pi / 2.0
+        config = MpcConfig(
+            horizon=5,
+            dt=0.02,
+            coordinate_frame="cartesian",
+            curvature_feedforward_gain=1.0,
+        )
+        controller = LinearMpcController(config)
+        reference = build_cartesian_reference_sequence(
+            path,
+            0,
+            state,
+            config.horizon,
+            config.dt,
+            preview_time_s=config.reference_preview_s,
+            state_dimension=controller._state_size(),
+        )
+        prediction = controller._build_prediction_cache(
+            controller._prediction_cache_key(reference, 0),
+            0,
+            reference,
+        )
+        self.assertTrue(np.any(prediction.steering_feedforward != 0.0))
+        self.assertTrue(
+            np.all(
+                np.abs(prediction.steering_feedforward)
+                <= config.steer_limit + 1e-12
+            )
+        )
 
     def test_linear_mpc_applies_steering_rate_limit_after_compensation(
         self,

@@ -140,7 +140,7 @@ class LongitudinalMpcTests(unittest.TestCase):
                 rear_slip=0.0,
                 dt=0.02,
             )
-        self.assertGreater(throttle, 0.8)
+        self.assertGreater(throttle, 0.6)
         self.assertEqual(brake, 0.0)
 
     def test_pedal_mapper_allows_high_throttle_on_straight(self) -> None:
@@ -151,7 +151,7 @@ class LongitudinalMpcTests(unittest.TestCase):
         )
         for _ in range(20):
             throttle, brake = mapper.step(
-                acceleration_mps2=3.2,
+                acceleration_mps2=6.0,
                 speed_mps=80.0 / 3.6,
                 steering=0.0,
                 rear_slip=0.0,

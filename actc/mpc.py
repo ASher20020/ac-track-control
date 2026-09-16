@@ -211,8 +211,12 @@ class MpcStats:
 class MpcConfig:
     horizon: int = 20
     dt: float = 0.02
+    coordinate_frame: str = "frenet"
     q_lateral: float = 38.0
     q_heading: float = 32.0
+    q_longitudinal_position: float = 0.0
+    curvature_feedforward_gain: float = 0.0
+    curvature_smoothing_m: float = 0.0
     q_speed: float = 2.0
     q_lateral_velocity: float = 1.0
     q_yaw_rate: float = 7.0
@@ -286,6 +290,24 @@ class MpcConfig:
         2.50,
         3.00,
     )
+    curvature_feedforward_map_kmh: tuple[float, ...] = (
+        0.0,
+        40.0,
+        80.0,
+        120.0,
+        160.0,
+        220.0,
+        300.0,
+    )
+    curvature_feedforward_map: tuple[float, ...] = (
+        0.30,
+        0.30,
+        0.285,
+        0.27,
+        0.22,
+        0.20,
+        0.20,
+    )
     nlp_solver: str = "ipopt"
     parameters: MpcVehicleParameters = field(
         default_factory=MpcVehicleParameters
@@ -309,6 +331,36 @@ def _steady_state_reference(
     yaw_rate_ref = speed_mps * curvature
     del parameters
     return 0.0, float(yaw_rate_ref)
+
+
+def _smoothed_curvature(
+    path: TrackPath,
+    index: int,
+    half_width_m: float,
+) -> float:
+    if half_width_m <= 0.0 or len(path.points) < 3:
+        return float(path.curvature[index])
+    spacing_m = max(
+        0.25,
+        path.total_length_m / max(1, len(path.points)),
+    )
+    radius = min(
+        len(path.points) // 2,
+        max(1, int(round(half_width_m / spacing_m))),
+    )
+    weighted_sum = 0.0
+    weight_sum = 0.0
+    for offset in range(-radius, radius + 1):
+        distance = abs(offset) * spacing_m
+        weight = max(0.0, 1.0 - distance / max(half_width_m, 1e-6))
+        if weight <= 0.0:
+            continue
+        point_index = (index + offset) % len(path.points)
+        weighted_sum += weight * float(path.curvature[point_index])
+        weight_sum += weight
+    if weight_sum <= 1e-9:
+        return float(path.curvature[index])
+    return weighted_sum / weight_sum
 
 
 def build_reference_sequence(
@@ -370,6 +422,96 @@ def build_reference_sequence(
     )
 
 
+def build_cartesian_reference_sequence(
+    path: TrackPath,
+    index: int,
+    state: VehicleState,
+    horizon: int,
+    dt: float,
+    parameters: MpcVehicleParameters | None = None,
+    preview_time_s: float = 0.08,
+    state_dimension: int = 7,
+    curvature_smoothing_m: float = 0.0,
+) -> MpcReferenceSequence:
+    """Build a local Cartesian reference trajectory in the current car frame."""
+    del parameters
+    states = np.zeros((horizon, state_dimension), dtype=float)
+    local_points = np.zeros((horizon, 2), dtype=float)
+    curvatures = np.zeros(horizon, dtype=float)
+    indices = np.zeros(horizon, dtype=np.int32)
+    distances = np.zeros(horizon, dtype=float)
+    predicted_speed_mps = max(3.0, min(60.0, state.speed_ms))
+    car_heading = physics_heading_to_world(state.heading_rad)
+    (
+        _index,
+        _fraction,
+        projected_x,
+        projected_z,
+        _reference_heading,
+        _curvature,
+    ) = path.project(
+        state.position[0],
+        state.position[2],
+        index,
+    )
+    dx_projection = projected_x - state.position[0]
+    dz_projection = projected_z - state.position[2]
+    contour_offset = (
+        -math.sin(car_heading) * dx_projection
+        + math.cos(car_heading) * dz_projection
+    )
+    cos_heading = math.cos(car_heading)
+    sin_heading = math.sin(car_heading)
+    preview_distance_m = max(0.0, state.speed_ms * preview_time_s)
+    distance_m = preview_distance_m
+    previous_heading = 0.0
+
+    for stage in range(horizon):
+        current_index = path.lookahead_index(index, distance_m)
+        speed_mps = max(
+            2.0,
+            path.speed_limit_kmh[current_index] / 3.6,
+        )
+        point_x, point_z = path.points[current_index]
+        dx = point_x - state.position[0]
+        dz = point_z - state.position[2]
+        local_x = cos_heading * dx + sin_heading * dz
+        local_y = -sin_heading * dx + cos_heading * dz
+        relative_heading = wrap_pi(
+            path.heading_rad[current_index] - car_heading
+        )
+        if stage > 0:
+            relative_heading = previous_heading + wrap_pi(
+                relative_heading - previous_heading
+            )
+        previous_heading = relative_heading
+        states[stage, 0] = local_x
+        states[stage, 1] = contour_offset
+        states[stage, 2] = relative_heading
+        states[stage, 3] = speed_mps
+        curvature = _smoothed_curvature(
+            path,
+            current_index,
+            curvature_smoothing_m,
+        )
+        states[stage, 5] = speed_mps * curvature
+        local_points[stage, 0] = local_x
+        local_points[stage, 1] = local_y
+        curvatures[stage] = curvature
+        indices[stage] = current_index
+        distances[stage] = distance_m
+        predicted_speed_mps = 0.5 * predicted_speed_mps + 0.5 * speed_mps
+        distance_m += max(1.0, predicted_speed_mps) * dt
+
+    return MpcReferenceSequence(
+        states=states,
+        local_points=local_points,
+        curvatures=curvatures,
+        indices=indices,
+        distances_m=distances,
+    )
+
+
 def vehicle_state_to_frenet(
     state: VehicleState,
     path: TrackPath,
@@ -404,10 +546,43 @@ def vehicle_state_to_frenet(
     )
 
 
+def vehicle_state_to_cartesian(
+    state: VehicleState,
+    path: TrackPath,
+    previous_index: int | None,
+) -> tuple[int, np.ndarray]:
+    """Return the car state in its current local Cartesian frame."""
+    index, _fraction, _x, _z, _heading, _curvature = path.project(
+        state.position[0],
+        state.position[2],
+        previous_index,
+    )
+    index, _fraction, _x, _z, _heading, _curvature = path.project(
+        state.position[0],
+        state.position[2],
+        previous_index,
+    )
+    vx = float(state.local_velocity_m_s[2])
+    vy = -float(state.local_velocity_m_s[0])
+    yaw_rate = -float(state.yaw_rate_rad_s)
+    return index, np.array(
+        [
+            0.0,
+            0.0,
+            0.0,
+            vx,
+            vy,
+            yaw_rate,
+        ],
+        dtype=float,
+    )
+
+
 @dataclass(frozen=True)
 class _LinearPredictionCache:
     speeds: np.ndarray
     stages: tuple[tuple[np.ndarray, np.ndarray], ...]
+    steering_feedforward: np.ndarray
     sx: np.ndarray
     su: np.ndarray
     su_t_q: np.ndarray
@@ -430,7 +605,7 @@ class LinearMpcController:
         self.warm_start: np.ndarray | None = None
         self.last_stats = MpcStats()
         self._solver: osqp.OSQP | None = None
-        self._solver_bucket: tuple[int, ...] | None = None
+        self._solver_bucket: tuple | None = None
         self._q_bar: sparse.csc_matrix | None = None
         self._r_bar: sparse.csc_matrix | None = None
         self._rd_bar: sparse.csc_matrix | None = None
@@ -440,7 +615,7 @@ class LinearMpcController:
         self._lower_template: np.ndarray | None = None
         self._upper_template: np.ndarray | None = None
         self._prediction_cache: dict[
-            tuple[tuple[int, ...], int],
+            tuple,
             _LinearPredictionCache,
         ] = {}
         self._warm_start_dual: np.ndarray | None = None
@@ -454,7 +629,7 @@ class LinearMpcController:
         )
 
     def calibrate(self, state: VehicleState, path: TrackPath) -> None:
-        self.previous_index, _ = vehicle_state_to_frenet(
+        self.previous_index, _ = self._state_in_control_frame(
             state,
             path,
             None,
@@ -476,7 +651,45 @@ class LinearMpcController:
         self._solver_bucket = None
 
     def _state_size(self) -> int:
-        return 6 if self.config.use_steering_actuator_model else 5
+        base_size = 6 if self._is_cartesian() else 5
+        return (
+            base_size + 1
+            if self.config.use_steering_actuator_model
+            else base_size
+        )
+
+    def _is_cartesian(self) -> bool:
+        return self.config.coordinate_frame == "cartesian"
+
+    def _state_in_control_frame(
+        self,
+        state: VehicleState,
+        path: TrackPath,
+        previous_index: int | None,
+    ) -> tuple[int, np.ndarray]:
+        if self._is_cartesian():
+            return vehicle_state_to_cartesian(
+                state,
+                path,
+                previous_index,
+            )
+        return vehicle_state_to_frenet(
+            state,
+            path,
+            previous_index,
+        )
+
+    def _diagnostic_frenet_state(
+        self,
+        state: VehicleState,
+        path: TrackPath,
+        previous_index: int | None,
+    ) -> tuple[int, np.ndarray]:
+        return vehicle_state_to_frenet(
+            state,
+            path,
+            previous_index,
+        )
 
     def step(
         self,
@@ -486,7 +699,7 @@ class LinearMpcController:
     ) -> LapControlInfo:
         del dt
         started = time.perf_counter()
-        index, x0 = vehicle_state_to_frenet(
+        index, x0 = self._state_in_control_frame(
             state,
             path,
             self.previous_index,
@@ -496,15 +709,15 @@ class LinearMpcController:
                 (x0, np.asarray([float(getattr(state, "steer", 0.0))]))
             )
         self.previous_index = index
-        reference = build_reference_sequence(
-            path,
-            index,
-            state,
-            self.config.horizon,
-            self.config.dt,
-            self.config.parameters,
-            self.config.reference_preview_s,
-            state_dimension=self._state_size(),
+        reference = self._build_reference(path, index, state)
+        diagnostic_index, diagnostic_frenet = (
+            self._diagnostic_frenet_state(
+                state,
+                path,
+                index,
+            )
+            if self._is_cartesian()
+            else (index, x0)
         )
         control, status, iterations = self._solve_condensed_qp(
             x0,
@@ -539,11 +752,17 @@ class LinearMpcController:
         )
         self._publish_preview(state, path, reference)
         return LapControlInfo(
-            path_index=index,
+            path_index=diagnostic_index,
             lookahead_index=int(reference.indices[-1]),
-            target_speed_kmh=float(reference.states[0, 2] * 3.6),
-            lateral_error_m=float(x0[0]),
-            heading_error_rad=float(x0[1]),
+            target_speed_kmh=float(
+                reference.states[
+                    0,
+                    3 if self._is_cartesian() else 2,
+                ]
+                * 3.6
+            ),
+            lateral_error_m=float(diagnostic_frenet[0]),
+            heading_error_rad=float(diagnostic_frenet[1]),
             lookahead_m=float(reference.distances_m[-1]),
             steer=clamp(
                 compensated_steering,
@@ -555,6 +774,37 @@ class LinearMpcController:
                 -1.0,
                 1.0,
             ),
+        )
+
+    def _build_reference(
+        self,
+        path: TrackPath,
+        index: int,
+        state: VehicleState,
+    ) -> MpcReferenceSequence:
+        if self._is_cartesian():
+            return build_cartesian_reference_sequence(
+                path,
+                index,
+                state,
+                self.config.horizon,
+                self.config.dt,
+                self.config.parameters,
+                self.config.reference_preview_s,
+                state_dimension=self._state_size(),
+                curvature_smoothing_m=(
+                    self.config.curvature_smoothing_m
+                ),
+            )
+        return build_reference_sequence(
+            path,
+            index,
+            state,
+            self.config.horizon,
+            self.config.dt,
+            self.config.parameters,
+            self.config.reference_preview_s,
+            state_dimension=self._state_size(),
         )
 
     def _compensate_steering(
@@ -652,22 +902,57 @@ class LinearMpcController:
             return
         reference_points: list[tuple[float, float]] = []
         predicted_points: list[tuple[float, float]] = []
+        car_heading = physics_heading_to_world(state.heading_rad)
+        cos_heading = math.cos(car_heading)
+        sin_heading = math.sin(car_heading)
         for stage, reference_index in enumerate(reference.indices):
             index = int(reference_index) % len(path.points)
             point_x, point_z = path.points[index]
-            heading = path.heading_rad[index]
-            normal_x = -math.sin(heading)
-            normal_z = math.cos(heading)
             reference_points.append((point_x, point_z))
-            lateral_error = float(
-                self._last_predicted_states[stage, 0]
-            )
-            predicted_points.append(
-                (
-                    point_x + lateral_error * normal_x,
-                    point_z + lateral_error * normal_z,
+            if self._is_cartesian():
+                local_x = float(self._last_predicted_states[stage, 0])
+                local_z = float(self._last_predicted_states[stage, 1])
+                predicted_points.append(
+                    (
+                        state.position[0]
+                        + cos_heading * local_x
+                        - sin_heading * local_z,
+                        state.position[2]
+                        + sin_heading * local_x
+                        + cos_heading * local_z,
+                    )
                 )
-            )
+            else:
+                heading = path.heading_rad[index]
+                normal_x = -math.sin(heading)
+                normal_z = math.cos(heading)
+                lateral_error = float(
+                    self._last_predicted_states[stage, 0]
+                )
+                predicted_points.append(
+                    (
+                        point_x + lateral_error * normal_x,
+                        point_z + lateral_error * normal_z,
+                    )
+                )
+        if self._is_cartesian():
+            lateral_errors = [
+                float(self._last_predicted_states[stage, 1])
+                for stage in range(len(reference.indices))
+            ]
+            heading_errors = [
+                float(self._last_predicted_states[stage, 2])
+                for stage in range(len(reference.indices))
+            ]
+        else:
+            lateral_errors = [
+                float(self._last_predicted_states[stage, 0])
+                for stage in range(len(reference.indices))
+            ]
+            heading_errors = [
+                float(self._last_predicted_states[stage, 1])
+                for stage in range(len(reference.indices))
+            ]
         self._preview_publisher.publish(
             current=(state.position[0], state.position[2]),
             reference=reference_points,
@@ -676,14 +961,8 @@ class LinearMpcController:
                 reference.indices,
                 len(path.points),
             ),
-            lateral_errors=[
-                float(self._last_predicted_states[stage, 0])
-                for stage in range(len(reference.indices))
-            ],
-            heading_errors=[
-                float(self._last_predicted_states[stage, 1])
-                for stage in range(len(reference.indices))
-            ],
+            lateral_errors=lateral_errors,
+            heading_errors=heading_errors,
         )
 
     @staticmethod
@@ -716,19 +995,20 @@ class LinearMpcController:
         nx = self._state_size()
         horizon = cfg.horizon
         assembly_started = time.perf_counter()
-        bucket = tuple(
-            int(round(float(speed) / cfg.speed_bucket_mps))
-            for speed in reference.states[:, 2]
-        )
         load_bucket = int(
             round(clamp(abs(lateral_accel_g), 0.0, 1.2) / 0.2)
         )
-        cache_key = (bucket, load_bucket)
+        bucket = self._prediction_cache_key(
+            reference,
+            load_bucket,
+        )
+        cache_key = bucket
         prediction = self._prediction_cache.get(cache_key)
         if prediction is None:
             prediction = self._build_prediction_cache(
                 bucket,
                 load_bucket,
+                reference,
             )
             self._prediction_cache[cache_key] = prediction
 
@@ -736,10 +1016,10 @@ class LinearMpcController:
             self._ensure_static_matrices()
         )
         del q_bar, r_bar
-        reference_vector = reference.states.reshape(-1)
+        reference_vector = reference.states.reshape(-1).copy()
         affine = self._propagate_affine(
             prediction,
-            reference.curvatures,
+            reference,
         )
         linear_term = prediction.sx @ x0 + affine[:, 0]
         previous_vector = np.tile(
@@ -836,21 +1116,98 @@ class LinearMpcController:
             iterations,
         )
 
+    def _prediction_cache_key(
+        self,
+        reference: MpcReferenceSequence,
+        load_bucket: int,
+    ) -> tuple:
+        cfg = self.config
+        if not self._is_cartesian():
+            speed_bucket = tuple(
+                int(round(float(speed) / cfg.speed_bucket_mps))
+                for speed in reference.states[:, 2]
+            )
+            return (speed_bucket, load_bucket)
+        heading_bucket = tuple(
+            int(round(float(psi) / 0.10))
+            for psi in reference.states[:, 2]
+        )
+        speed_bucket = tuple(
+            int(round(float(speed) / cfg.speed_bucket_mps))
+            for speed in reference.states[:, 3]
+        )
+        lateral_velocity_bucket = tuple(
+            int(round(float(vy) / 1.0))
+            for vy in reference.states[:, 4]
+        )
+        return (
+            "cartesian",
+            heading_bucket,
+            speed_bucket,
+            lateral_velocity_bucket,
+            load_bucket,
+        )
+
     def _build_prediction_cache(
         self,
-        bucket: tuple[int, ...],
+        bucket: tuple,
         load_bucket: int,
+        reference: MpcReferenceSequence | None = None,
     ) -> _LinearPredictionCache:
         cfg = self.config
         nx, nu, horizon = self._state_size(), 2, cfg.horizon
-        speeds = np.asarray(bucket, dtype=float) * cfg.speed_bucket_mps
+        if self._is_cartesian():
+            assert reference is not None
+            speed_buckets = bucket[2]
+            speeds = (
+                np.asarray(speed_buckets, dtype=float)
+                * cfg.speed_bucket_mps
+            )
+            reference_states = np.asarray(
+                [
+                    reference.states[
+                        stage,
+                        [2, 4, 5],
+                    ]
+                    for stage in range(horizon)
+                ],
+                dtype=float,
+            )
+        else:
+            speeds = (
+                np.asarray(bucket[0], dtype=float)
+                * cfg.speed_bucket_mps
+            )
+            reference_states = None
         stages = tuple(
             self._stage_model_from_speed(
                 float(speed),
                 lateral_accel_g=load_bucket * 0.2,
+                reference_pose=(
+                    reference_states[stage]
+                    if reference_states is not None
+                    else None
+                ),
             )
-            for speed in speeds
+            for stage, speed in enumerate(speeds)
         )
+        steering_feedforward = np.zeros(horizon, dtype=float)
+        if self._is_cartesian() and reference_states is not None:
+            for stage, speed in enumerate(speeds):
+                feedforward_gain = (
+                    cfg.curvature_feedforward_gain
+                    * _lookup_vehicle_map(
+                        float(speed) * 3.6,
+                        cfg.curvature_feedforward_map_kmh,
+                        cfg.curvature_feedforward_map,
+                    )
+                )
+                steering_feedforward[stage] = clamp(
+                    feedforward_gain
+                    * float(reference_states[stage, 2]),
+                    -cfg.steer_limit,
+                    cfg.steer_limit,
+                )
         sx = np.zeros((horizon * nx, nx), dtype=float)
         su = np.zeros((horizon * nx, horizon * nu), dtype=float)
         phi = np.eye(nx)
@@ -871,7 +1228,12 @@ class LinearMpcController:
             su[row, :] = control_sensitivity
 
         q_bar, r_bar, rd_bar = self._cost_matrices_for_speeds(
-            speeds
+            speeds,
+            (
+                reference_states[:, 0]
+                if reference_states is not None
+                else None
+            ),
         )
         su_t_q = np.asarray(su.T @ q_bar)
         control_p_matrix = np.asarray(
@@ -893,6 +1255,7 @@ class LinearMpcController:
         return _LinearPredictionCache(
             speeds=speeds,
             stages=stages,
+            steering_feedforward=steering_feedforward,
             sx=sx,
             su=su,
             su_t_q=su_t_q,
@@ -905,6 +1268,7 @@ class LinearMpcController:
     def _cost_matrices_for_speeds(
         self,
         speeds_mps: np.ndarray,
+        reference_headings: np.ndarray | None = None,
     ) -> tuple[
         sparse.csc_matrix,
         sparse.csc_matrix,
@@ -912,7 +1276,11 @@ class LinearMpcController:
     ]:
         cfg = self.config
         horizon = cfg.horizon
-        q_diagonal: list[float] = []
+        nx = self._state_size()
+        q_matrix = sparse.lil_matrix(
+            (horizon * nx, horizon * nx),
+            dtype=float,
+        )
         r_diagonal: list[float] = []
         rd_diagonal: list[float] = []
         for stage, speed_mps in enumerate(speeds_mps):
@@ -937,19 +1305,49 @@ class LinearMpcController:
                 if stage == horizon - 1
                 else 1.0
             )
-            q_diagonal.extend(
-                [
-                    q_lateral * terminal_scale,
-                    q_heading * terminal_scale,
-                    cfg.q_speed * terminal_scale,
-                    cfg.q_lateral_velocity * terminal_scale,
-                    q_yaw_rate * terminal_scale,
-                ]
-            )
-            if cfg.use_steering_actuator_model:
-                q_diagonal.append(
-                    cfg.steering_state_weight * terminal_scale
+            if self._is_cartesian():
+                row = stage * nx
+                q_matrix[row, row] = (
+                    cfg.q_longitudinal_position * terminal_scale
                 )
+                q_matrix[row + 1, row + 1] = (
+                    q_lateral * terminal_scale
+                )
+                q_matrix[row + 2, row + 2] = (
+                    q_heading * terminal_scale
+                )
+                q_matrix[row + 3, row + 3] = (
+                    cfg.q_speed * terminal_scale
+                )
+                q_matrix[row + 4, row + 4] = (
+                    cfg.q_lateral_velocity * terminal_scale
+                )
+                q_matrix[row + 5, row + 5] = (
+                    q_yaw_rate * terminal_scale
+                )
+                if cfg.use_steering_actuator_model:
+                    q_matrix[row + 6, row + 6] = (
+                        cfg.steering_state_weight * terminal_scale
+                    )
+            else:
+                row = stage * nx
+                q_matrix[row, row] = q_lateral * terminal_scale
+                q_matrix[row + 1, row + 1] = (
+                    q_heading * terminal_scale
+                )
+                q_matrix[row + 2, row + 2] = (
+                    cfg.q_speed * terminal_scale
+                )
+                q_matrix[row + 3, row + 3] = (
+                    cfg.q_lateral_velocity * terminal_scale
+                )
+                q_matrix[row + 4, row + 4] = (
+                    q_yaw_rate * terminal_scale
+                )
+                if cfg.use_steering_actuator_model:
+                    q_matrix[row + 5, row + 5] = (
+                        cfg.steering_state_weight * terminal_scale
+                    )
             r_diagonal.extend(
                 [
                     cfg.r_steer
@@ -973,7 +1371,7 @@ class LinearMpcController:
                 ]
             )
         return (
-            sparse.diags(q_diagonal, format="csc"),
+            q_matrix.tocsc(),
             sparse.diags(r_diagonal, format="csc"),
             sparse.diags(rd_diagonal, format="csc"),
         )
@@ -981,11 +1379,54 @@ class LinearMpcController:
     def _propagate_affine(
         self,
         prediction: _LinearPredictionCache,
-        curvatures: np.ndarray,
+        reference: MpcReferenceSequence,
     ) -> np.ndarray:
         cfg = self.config
         nx, horizon = self._state_size(), cfg.horizon
         affine = np.zeros((horizon * nx, 1), dtype=float)
+        if self._is_cartesian():
+            reference_matrix = reference.states[:, :nx]
+            nominal_controls = np.zeros((horizon, 2), dtype=float)
+            for stage, (a_matrix, b_matrix) in enumerate(
+                prediction.stages
+            ):
+                next_stage = min(stage + 1, horizon - 1)
+                target = (
+                    reference_matrix[next_stage]
+                    - a_matrix @ reference_matrix[stage]
+                )
+                control, _residuals, _rank, _singular = np.linalg.lstsq(
+                    b_matrix,
+                    target,
+                    rcond=None,
+                )
+                nominal_controls[stage] = np.array(
+                    [
+                        clamp(
+                            float(control[0]),
+                            -cfg.steer_limit,
+                            cfg.steer_limit,
+                        ),
+                        clamp(
+                            float(control[1]),
+                            -cfg.brake_limit_mps2,
+                            cfg.accel_limit_mps2,
+                        ),
+                    ],
+                    dtype=float,
+                )
+                if cfg.curvature_feedforward_gain > 0.0:
+                    nominal_controls[stage, 0] = (
+                        prediction.steering_feedforward[stage]
+                    )
+            affine = (
+                reference_matrix.reshape(-1, 1)
+                - prediction.sx
+                @ reference_matrix[0].reshape(-1, 1)
+                - prediction.su
+                @ nominal_controls.reshape(-1, 1)
+            )
+            return affine
         propagated = np.zeros(nx, dtype=float)
         for stage, (a_matrix, _b_matrix) in enumerate(
             prediction.stages
@@ -993,7 +1434,7 @@ class LinearMpcController:
             disturbance = np.zeros(nx, dtype=float)
             disturbance[1] = (
                 -prediction.speeds[stage]
-                * float(curvatures[stage])
+                * float(reference.curvatures[stage])
                 * cfg.dt
             )
             propagated = a_matrix @ propagated + disturbance
@@ -1012,16 +1453,29 @@ class LinearMpcController:
         cfg = self.config
         nx, nu, horizon = self._state_size(), 2, cfg.horizon
         if self._q_bar is None:
-            state_weights = np.array(
-                [
-                    cfg.q_lateral,
-                    cfg.q_heading,
-                    cfg.q_speed,
-                    cfg.q_lateral_velocity,
-                    cfg.q_yaw_rate,
-                ],
-                dtype=float,
-            )
+            if self._is_cartesian():
+                state_weights = np.array(
+                    [
+                        cfg.q_longitudinal_position,
+                        cfg.q_lateral,
+                        cfg.q_heading,
+                        cfg.q_speed,
+                        cfg.q_lateral_velocity,
+                        cfg.q_yaw_rate,
+                    ],
+                    dtype=float,
+                )
+            else:
+                state_weights = np.array(
+                    [
+                        cfg.q_lateral,
+                        cfg.q_heading,
+                        cfg.q_speed,
+                        cfg.q_lateral_velocity,
+                        cfg.q_yaw_rate,
+                    ],
+                    dtype=float,
+                )
             if cfg.use_steering_actuator_model:
                 state_weights = np.concatenate(
                     (state_weights, [cfg.steering_state_weight])
@@ -1131,6 +1585,7 @@ class LinearMpcController:
         self,
         speed_mps: float,
         lateral_accel_g: float = 0.0,
+        reference_pose: np.ndarray | None = None,
     ) -> tuple[np.ndarray, np.ndarray]:
         cfg = self.config
         params = cfg.parameters
@@ -1203,21 +1658,66 @@ class LinearMpcController:
         )
         a_cont[4, :] *= yaw_response_scale
         b_cont[4, 0] *= yaw_response_scale
+        if self._is_cartesian():
+            psi = (
+                float(reference_pose[0])
+                if reference_pose is not None
+                else 0.0
+            )
+            lateral_velocity = (
+                float(reference_pose[1])
+                if reference_pose is not None
+                else 0.0
+            )
+            car_a_cont = np.zeros((6, 6), dtype=float)
+            car_a_cont[0, 2] = (
+                -vx * math.sin(psi)
+                - lateral_velocity * math.cos(psi)
+            )
+            car_a_cont[0, 3] = math.cos(psi)
+            car_a_cont[0, 4] = -math.sin(psi)
+            car_a_cont[1, 2] = (
+                vx * math.cos(psi)
+                - lateral_velocity * math.sin(psi)
+            )
+            car_a_cont[1, 3] = math.sin(psi)
+            car_a_cont[1, 4] = math.cos(psi)
+            car_a_cont[2, 5] = 1.0
+            car_a_cont[3:6, 3:6] = a_cont[2:5, 2:5]
+            car_b_cont = np.zeros((6, 2), dtype=float)
+            car_b_cont[3:6, :] = b_cont[2:5, :]
+            a_cont = car_a_cont
+            b_cont = car_b_cont
         if cfg.use_steering_actuator_model:
             actuator_tau = max(
                 1e-3,
                 cfg.steering_actuator_tau_s,
             )
-            augmented_a = np.zeros((6, 6), dtype=float)
-            augmented_a[:5, :5] = a_cont
-            augmented_a[3, 5] = b_cont[3, 0]
-            augmented_a[4, 5] = b_cont[4, 0]
-            augmented_a[5, 5] = -1.0 / actuator_tau
-            augmented_b = np.zeros((6, 2), dtype=float)
-            augmented_b[:5, :] = b_cont
-            augmented_b[3, 0] = 0.0
-            augmented_b[4, 0] = 0.0
-            augmented_b[5, 0] = 1.0 / actuator_tau
+            base_size = a_cont.shape[0]
+            augmented_a = np.zeros(
+                (base_size + 1, base_size + 1),
+                dtype=float,
+            )
+            augmented_a[:base_size, :base_size] = a_cont
+            lateral_velocity_index = 4 if self._is_cartesian() else 3
+            yaw_rate_index = 5 if self._is_cartesian() else 4
+            augmented_a[
+                lateral_velocity_index,
+                base_size,
+            ] = b_cont[lateral_velocity_index, 0]
+            augmented_a[
+                yaw_rate_index,
+                base_size,
+            ] = b_cont[yaw_rate_index, 0]
+            augmented_a[base_size, base_size] = -1.0 / actuator_tau
+            augmented_b = np.zeros(
+                (base_size + 1, 2),
+                dtype=float,
+            )
+            augmented_b[:base_size, :] = b_cont
+            augmented_b[lateral_velocity_index, 0] = 0.0
+            augmented_b[yaw_rate_index, 0] = 0.0
+            augmented_b[base_size, 0] = 1.0 / actuator_tau
             a_cont = augmented_a
             b_cont = augmented_b
         a_matrix = np.eye(a_cont.shape[0]) + a_cont * dt

@@ -18,12 +18,25 @@ from .controllers import (
     SpeedController,
     SpeedControllerConfig,
 )
+from .capabilities import (
+    acceleration_capability_mps2,
+    braking_capability_mps2,
+    planning_braking_capability_mps2,
+)
 from .inputs import InputBackend, create_input_backend, focus_ac_window
 from .lap import (
     LapControlInfo,
     PurePursuitController,
     StanleyConfig,
     StanleyController,
+)
+from .lateral_scan import (
+    LapScanMetrics,
+    LateralScanCandidate,
+    build_lateral_refine_schedule,
+    build_lateral_scan_schedule,
+    compute_lap_scan_metrics,
+    select_refinement_confirmations,
 )
 from .longitudinal import (
     LongitudinalMpcConfig,
@@ -44,6 +57,10 @@ from .planning import (
     PlanningUpdate,
 )
 from .shared_memory import SharedMemoryReader, SharedMemoryUnavailable, VehicleState
+from .speed_calibration import (
+    SpeedCalibrationCandidate,
+    build_speed_calibration_schedule,
+)
 from .track import (
     TrackPath,
     clamp,
@@ -223,6 +240,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
     )
+    parser.add_argument(
+        "--line-offset-envelope",
+        type=Path,
+        default=None,
+        help="Optional per-point lateral reference-line offsets.",
+    )
     parser.add_argument("--lateral-accel", type=float, default=3.0)
     parser.add_argument(
         "--scaled-speed-max-lateral-g",
@@ -255,6 +278,28 @@ def build_parser() -> argparse.ArgumentParser:
         default="centerline",
     )
     parser.add_argument("--autotune", action="store_true")
+    parser.add_argument(
+        "--lateral-scan",
+        action="store_true",
+        help=(
+            "Apply the fixed 20-candidate lateral MPC scan schedule, "
+            "one candidate per lap."
+        ),
+    )
+    parser.add_argument(
+        "--lateral-refine",
+        action="store_true",
+        help=(
+            "Run six exploration laps and four adaptive confirmation laps."
+        ),
+    )
+    parser.add_argument(
+        "--speed-calibration",
+        action="store_true",
+        help=(
+            "Run the fixed 10-lap monotonic speed-scale calibration."
+        ),
+    )
     parser.add_argument("--resume-tuning", type=Path, default=None)
     parser.add_argument("--mpc-model", type=Path, default=None)
     parser.add_argument("--target-lap-s", type=float, default=180.0)
@@ -458,6 +503,9 @@ def _apply_saved_lmpc_parameters(
     allowed = {
         "q_lateral",
         "q_heading",
+        "q_longitudinal_position",
+        "curvature_feedforward_gain",
+        "curvature_smoothing_m",
         "q_speed",
         "q_lateral_velocity",
         "q_yaw_rate",
@@ -484,11 +532,16 @@ def _apply_saved_lmpc_parameters(
         "q_yaw_rate_weight_map",
         "r_steer_weight_map",
         "rd_steer_weight_map",
+        "curvature_feedforward_map_kmh",
+        "curvature_feedforward_map",
     }
     for key in allowed:
         value = parameters.get(key)
         if isinstance(value, (int, float)):
             setattr(config, key, float(value))
+    coordinate_frame = parameters.get("coordinate_frame")
+    if coordinate_frame in {"frenet", "cartesian"}:
+        config.coordinate_frame = coordinate_frame
     for key in (
         "coast_down_accel_map_kmh",
         "coast_down_accel_map_mps2",
@@ -695,6 +748,39 @@ def run(args: argparse.Namespace) -> int:
                 "Line clearance projection: "
                 f"target={args.line_target_clearance_m:.2f}m"
             )
+        if args.line_offset_envelope is not None:
+            offset_payload = json.loads(
+                args.line_offset_envelope.read_text(encoding="utf-8")
+            )
+            offsets = offset_payload.get("offset_m")
+            if (
+                not isinstance(offsets, list)
+                or len(offsets) != len(path.points)
+            ):
+                raise RuntimeError(
+                    "Line offset envelope must contain an offset_m list "
+                    "matching the resampled path point count."
+                )
+            path = path.with_line_offsets(
+                [float(value) for value in offsets],
+                base_margin_m=max(
+                    0.35,
+                    args.line_target_clearance_m,
+                ),
+                max_edge_margin_m=max(
+                    0.35,
+                    args.line_target_clearance_m,
+                ),
+                max_speed_kmh=args.max_speed_kmh,
+                min_speed_kmh=args.min_speed_kmh,
+                lateral_accel_mps2=args.lateral_accel,
+                accel_mps2=args.longitudinal_accel,
+                brake_mps2=args.braking_accel,
+            )
+            print(
+                "Local line offsets: "
+                f"min={min(offsets):.2f}m max={max(offsets):.2f}m"
+            )
         if (
             args.braking_lead_distance_m > 0.0
             or args.braking_lead_speed_gain_m_per_kmh > 0.0
@@ -811,6 +897,73 @@ def run(args: argparse.Namespace) -> int:
                 resume_tuning.get("controller", {}),
             )
             lap_controller = StanleyController(stanley_config)
+        lateral_scan_schedule: list[LateralScanCandidate | None] = []
+        speed_calibration_schedule: tuple[
+            SpeedCalibrationCandidate,
+            ...,
+        ] = ()
+        if args.speed_calibration and (
+            args.lateral_scan or args.lateral_refine
+        ):
+            raise RuntimeError(
+                "--speed-calibration cannot be combined with lateral scans."
+            )
+        if args.speed_calibration:
+            if not isinstance(lap_controller, LinearMpcController):
+                raise RuntimeError(
+                    "--speed-calibration requires the linear MPC controller."
+                )
+            if args.laps != 10:
+                raise RuntimeError(
+                    "--speed-calibration requires exactly 10 laps."
+                )
+            if args.autotune:
+                raise RuntimeError(
+                    "--speed-calibration cannot be combined with --autotune."
+                )
+            if args.planning_laps > 0:
+                raise RuntimeError(
+                    "--speed-calibration requires --planning-laps 0."
+                )
+            speed_calibration_schedule = (
+                build_speed_calibration_schedule()
+            )
+        if args.lateral_scan and args.lateral_refine:
+            raise RuntimeError(
+                "--lateral-scan and --lateral-refine are mutually exclusive."
+            )
+        if args.lateral_scan or args.lateral_refine:
+            if not isinstance(lap_controller, LinearMpcController):
+                raise RuntimeError(
+                    "Lateral scanning requires the linear MPC controller."
+                )
+            required_laps = 20 if args.lateral_scan else 11
+            if args.laps != required_laps:
+                raise RuntimeError(
+                    f"Lateral scan mode requires exactly {required_laps} laps."
+                )
+            if args.autotune:
+                raise RuntimeError(
+                    "Lateral scan mode cannot be combined with --autotune."
+                )
+            if args.planning_laps > 0:
+                raise RuntimeError(
+                    "Lateral scan mode requires --planning-laps 0."
+                )
+            lateral_scan_schedule = list(
+                build_lateral_refine_schedule()
+                if args.lateral_refine
+                else build_lateral_scan_schedule()
+            )
+            first_candidate = lateral_scan_schedule[0]
+            if first_candidate is None:
+                raise RuntimeError("Lateral scan schedule is incomplete.")
+            first_candidate.apply(lap_controller.config)
+            lap_controller.invalidate_plan_cache()
+            print(
+                f"Lateral scan candidate 1/{required_laps}: "
+                f"{_summarize_scan_candidate(first_candidate)}"
+            )
         lap_controller.calibrate(state, path)
         if args.longitudinal_controller == "mpc":
             longitudinal_config = LongitudinalMpcConfig(
@@ -922,6 +1075,10 @@ def run(args: argparse.Namespace) -> int:
                 (1.0, 1.0, 1.0, 1.0),
             )
         )
+        if speed_calibration_schedule:
+            initial_speed_scales = list(
+                speed_calibration_schedule[0].speed_scale_by_band
+            )
         initial_braking = list(
             resume_tuning.get(
                 "braking_accel_by_band",
@@ -949,6 +1106,11 @@ def run(args: argparse.Namespace) -> int:
                     longitudinal_pedal_mapper,
                 ),
             )
+            if lateral_scan_schedule:
+                _write_lateral_scan_plan(
+                    args.log,
+                    lateral_scan_schedule,
+                )
 
         print(
             f"Arming lap controller in {args.arm_delay:.1f}s. "
@@ -979,6 +1141,9 @@ def run(args: argparse.Namespace) -> int:
             target_lap_s=args.target_lap_s,
             speed_scale_step=args.speed_scale_step,
             max_speed_scale=args.max_speed_scale,
+            lateral_scan_schedule=lateral_scan_schedule,
+            lateral_refine=args.lateral_refine,
+            speed_calibration_schedule=speed_calibration_schedule,
             count_from_start=args.count_from_start,
             base_lateral_accel_mps2=args.lateral_accel,
             scaled_speed_max_lateral_accel_mps2=(
@@ -1199,6 +1364,9 @@ def lap_log_writer(path: Path):
         "rpm",
         "heading_rad",
         "yaw_rate_rad_s",
+        "yaw_rate_ref_rad_s",
+        "yaw_rate_error_rad_s",
+        "sideslip_rad",
         "position_x",
         "position_y",
         "position_z",
@@ -1244,6 +1412,8 @@ def lap_log_writer(path: Path):
         "mpc_status",
         "longitudinal_accel_cmd",
         "longitudinal_accel_applied",
+        "longitudinal_preview_accel",
+        "longitudinal_preview_min_accel",
         "longitudinal_solve_ms",
         "longitudinal_iterations",
         "longitudinal_status",
@@ -1260,15 +1430,24 @@ def write_lap_log_row(
     info: LapControlInfo,
     target_speed_kmh: float | None = None,
     lap_number: int = 1,
+    yaw_rate_reference_rad_s: float | None = None,
+    sideslip_rad: float | None = None,
     lateral_mpc_stats=None,
     longitudinal_stats: LongitudinalMpcResult | None = None,
     applied_acceleration_mps2: float | None = None,
+    longitudinal_preview_accel_mps2: float | None = None,
+    longitudinal_preview_min_accel_mps2: float | None = None,
 ) -> None:
     steer, throttle, brake = command
     logged_target_speed = (
         info.target_speed_kmh
         if target_speed_kmh is None
         else target_speed_kmh
+    )
+    yaw_rate_error_rad_s = (
+        -state.yaw_rate_rad_s - yaw_rate_reference_rad_s
+        if yaw_rate_reference_rad_s is not None
+        else None
     )
     writer.writerow(
         {
@@ -1282,6 +1461,21 @@ def write_lap_log_row(
             "rpm": f"{state.rpm:.3f}",
             "heading_rad": f"{state.heading_rad:.9f}",
             "yaw_rate_rad_s": f"{state.yaw_rate_rad_s:.9f}",
+            "yaw_rate_ref_rad_s": (
+                f"{yaw_rate_reference_rad_s:.9f}"
+                if yaw_rate_reference_rad_s is not None
+                else ""
+            ),
+            "yaw_rate_error_rad_s": (
+                f"{yaw_rate_error_rad_s:.9f}"
+                if yaw_rate_error_rad_s is not None
+                else ""
+            ),
+            "sideslip_rad": (
+                f"{sideslip_rad:.9f}"
+                if sideslip_rad is not None
+                else ""
+            ),
             "position_x": f"{state.position[0]:.6f}",
             "position_y": f"{state.position[1]:.6f}",
             "position_z": f"{state.position[2]:.6f}",
@@ -1359,6 +1553,16 @@ def write_lap_log_row(
                 if applied_acceleration_mps2 is not None
                 else ""
             ),
+            "longitudinal_preview_accel": (
+                f"{longitudinal_preview_accel_mps2:.6f}"
+                if longitudinal_preview_accel_mps2 is not None
+                else ""
+            ),
+            "longitudinal_preview_min_accel": (
+                f"{longitudinal_preview_min_accel_mps2:.6f}"
+                if longitudinal_preview_min_accel_mps2 is not None
+                else ""
+            ),
             "longitudinal_solve_ms": (
                 f"{longitudinal_stats.solve_time_ms:.6f}"
                 if longitudinal_stats is not None
@@ -1396,6 +1600,12 @@ def run_lap_loop(
     target_lap_s: float,
     speed_scale_step: float,
     max_speed_scale: float,
+    lateral_scan_schedule: list[LateralScanCandidate | None],
+    lateral_refine: bool,
+    speed_calibration_schedule: tuple[
+        SpeedCalibrationCandidate,
+        ...,
+    ],
     count_from_start: bool,
     base_lateral_accel_mps2: float,
     scaled_speed_max_lateral_accel_mps2: float,
@@ -1474,10 +1684,19 @@ def run_lap_loop(
     lap_max_tyres_out = 0
     lap_lateral_errors: list[float] = []
     lap_heading_errors: list[float] = []
+    lap_yaw_rate_errors: list[float] = []
+    lap_sideslip_abs: list[float] = []
+    lap_raw_steer_commands: list[float] = []
     band_lateral_errors: list[list[float]] = [
         [] for _ in range(band_count)
     ]
     band_heading_errors: list[list[float]] = [
+        [] for _ in range(band_count)
+    ]
+    band_yaw_rate_errors: list[list[float]] = [
+        [] for _ in range(band_count)
+    ]
+    band_sideslip_abs: list[list[float]] = [
         [] for _ in range(band_count)
     ]
     band_steer_delta_sum = [0.0] * band_count
@@ -1498,6 +1717,7 @@ def run_lap_loop(
     steer_delta_sum = 0.0
     steer_delta_count = 0
     planning_samples: list[PlanningSample] = []
+    refine_metrics_by_design: dict[int, LapScanMetrics] = {}
 
     if log_path is not None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1598,6 +1818,23 @@ def run_lap_loop(
                 abs(info.heading_error_rad),
             )
             lap_heading_errors.append(abs(info.heading_error_rad))
+            path_index = int(info.path_index) % len(path.points)
+            yaw_rate_reference_rad_s = (
+                state.speed_ms * float(path.curvature[path_index])
+            )
+            yaw_rate_error_rad_s = (
+                -float(state.yaw_rate_rad_s)
+                - yaw_rate_reference_rad_s
+            )
+            vx_control = float(state.local_velocity_m_s[2])
+            vy_control = -float(state.local_velocity_m_s[0])
+            sideslip_rad = math.atan2(
+                vy_control,
+                max(5.0, vx_control),
+            )
+            lap_yaw_rate_errors.append(yaw_rate_error_rad_s)
+            if state.speed_kmh >= 40.0:
+                lap_sideslip_abs.append(abs(sideslip_rad))
             lap_max_tyres_out = max(lap_max_tyres_out, state.tyres_out)
             band_lateral_errors[speed_band].append(
                 abs(info.lateral_error_m)
@@ -1605,6 +1842,13 @@ def run_lap_loop(
             band_heading_errors[speed_band].append(
                 abs(info.heading_error_rad)
             )
+            band_yaw_rate_errors[speed_band].append(
+                yaw_rate_error_rad_s
+            )
+            if state.speed_kmh >= 40.0:
+                band_sideslip_abs[speed_band].append(
+                    abs(sideslip_rad)
+                )
             band_sample_count[speed_band] += 1
             band_max_tyres_out[speed_band] = max(
                 band_max_tyres_out[speed_band],
@@ -1627,6 +1871,7 @@ def run_lap_loop(
                 if info.raw_steer is None
                 else info.raw_steer
             )
+            lap_raw_steer_commands.append(raw_steer)
             raw_steer_delta = abs(
                 raw_steer - previous_raw_steer_command
             )
@@ -1696,6 +1941,8 @@ def run_lap_loop(
             target_speed_kmh = commanded_target_speed_kmh
             longitudinal_result = None
             applied_acceleration_mps2 = None
+            longitudinal_preview_accel_mps2 = None
+            longitudinal_preview_min_accel_mps2 = None
             if longitudinal_mpc is None:
                 throttle, brake = speed_controller.step(
                     state.speed_kmh,
@@ -1716,6 +1963,14 @@ def run_lap_loop(
                         ),
                     )
                 )
+                current_acceleration_capability = min(
+                    max(0.5, base_longitudinal_accel_mps2),
+                    acceleration_capability_mps2(state.speed_ms),
+                )
+                current_braking_capability = min(
+                    max(1.0, load_adjusted_braking_limit),
+                    planning_braking_capability_mps2(state.speed_ms),
+                )
                 preview = _build_longitudinal_preview(
                     path,
                     info.path_index,
@@ -1723,9 +1978,8 @@ def run_lap_loop(
                     speed_mps=state.speed_ms,
                     horizon=longitudinal_mpc.config.horizon,
                     dt=longitudinal_mpc.config.dt,
-                    acceleration_limit_mps2=max(
-                        0.5,
-                        base_longitudinal_accel_mps2,
+                    acceleration_limit_mps2=(
+                        current_acceleration_capability
                     ),
                     braking_limit_mps2=active_braking_limit,
                     speed_scale_by_band=speed_scale_by_band,
@@ -1738,20 +1992,24 @@ def run_lap_loop(
                         scaled_speed_max_lateral_accel_mps2
                     ),
                 )
+                longitudinal_preview_accel_mps2 = (
+                    preview[1] - preview[0]
+                ) / max(longitudinal_mpc.config.dt, 1e-6)
+                longitudinal_preview_min_accel_mps2 = min(
+                    (later - earlier)
+                    / max(longitudinal_mpc.config.dt, 1e-6)
+                    for earlier, later in zip(preview, preview[1:])
+                )
                 mpc_result = longitudinal_mpc.step(
                     speed_mps=state.speed_ms,
                     acceleration_mps2=(
                         float(state.acceleration_g[2]) * 9.81
                     ),
                     reference_speed_mps=preview,
-                    acceleration_limit_mps2=max(
-                        0.5,
-                        base_longitudinal_accel_mps2,
+                    acceleration_limit_mps2=(
+                        current_acceleration_capability
                     ),
-                    braking_limit_mps2=max(
-                        1.0,
-                        load_adjusted_braking_limit,
-                    ),
+                    braking_limit_mps2=current_braking_capability,
                     lateral_accel_g=abs(
                         float(state.acceleration_g[0])
                     ),
@@ -1841,6 +2099,10 @@ def run_lap_loop(
                     info,
                     target_speed_kmh,
                     lap_number,
+                    yaw_rate_reference_rad_s=(
+                        yaw_rate_reference_rad_s
+                    ),
+                    sideslip_rad=sideslip_rad,
                     lateral_mpc_stats=getattr(
                         lap_controller,
                         "last_stats",
@@ -1849,6 +2111,12 @@ def run_lap_loop(
                     longitudinal_stats=longitudinal_result,
                     applied_acceleration_mps2=(
                         applied_acceleration_mps2
+                    ),
+                    longitudinal_preview_accel_mps2=(
+                        longitudinal_preview_accel_mps2
+                    ),
+                    longitudinal_preview_min_accel_mps2=(
+                        longitudinal_preview_min_accel_mps2
                     ),
                 )
 
@@ -1874,6 +2142,14 @@ def run_lap_loop(
                     p95_heading_error = _percentile(
                         lap_heading_errors,
                         0.95,
+                    )
+                    scan_metrics = compute_lap_scan_metrics(
+                        lateral_errors_m=lap_lateral_errors,
+                        heading_errors_rad=lap_heading_errors,
+                        yaw_rate_errors_rad_s=lap_yaw_rate_errors,
+                        sideslip_abs_rad=lap_sideslip_abs,
+                        raw_steer_commands=lap_raw_steer_commands,
+                        dt=period,
                     )
                     band_p95_lateral_errors = tuple(
                         _percentile(values, 0.95)
@@ -1939,6 +2215,9 @@ def run_lap_loop(
                         f"p95_lat={p95_lateral_error:.2f}m "
                         f"max_heading={lap_max_heading_error:.3f}rad "
                         f"p95_heading={p95_heading_error:.3f}rad "
+                        f"yaw_err_p95={scan_metrics.yaw_rate_error_p95_rad_s:.3f} "
+                        f"sideslip_p95={scan_metrics.sideslip_p95_rad:.4f}rad "
+                        f"post_score={scan_metrics.composite_score:.3f} "
                         f"tyres_out={lap_max_tyres_out} "
                         f"steer_activity={steering_activity:.4f} "
                         f"speed_scale={speed_scale_by_band} "
@@ -1957,6 +2236,43 @@ def run_lap_loop(
                         longitudinal_mpc,
                         longitudinal_pedal_mapper,
                     )
+                    scan_candidate = (
+                        lateral_scan_schedule[completed_lap_number - 1]
+                        if lateral_scan_schedule
+                        else None
+                    )
+                    if (
+                        lateral_refine
+                        and scan_candidate is not None
+                        and 2 <= completed_lap_number <= 7
+                    ):
+                        refine_metrics_by_design[
+                            scan_candidate.design_index
+                        ] = scan_metrics
+                    if lateral_refine and completed_lap_number == 7:
+                        confirmations = select_refinement_confirmations(
+                            refine_metrics_by_design
+                        )
+                        lateral_scan_schedule[7:11] = confirmations
+                        ranked = sorted(
+                            refine_metrics_by_design.items(),
+                            key=lambda item: item[1].composite_score,
+                        )
+                        print(
+                            "Refine selection: "
+                            + ", ".join(
+                                f"idx{index}="
+                                f"{metrics.composite_score:.3f}"
+                                for index, metrics in ranked
+                            )
+                        )
+                        print(
+                            "Confirmation order: "
+                            + " -> ".join(
+                                str(candidate.design_index)
+                                for candidate in confirmations
+                            )
+                        )
                     if autotune and lap_number < lap_limit:
                         control_tuning_active = (
                             control_laps <= 0
@@ -2121,9 +2437,16 @@ def run_lap_loop(
                         lap_max_tyres_out = 0
                         lap_lateral_errors.clear()
                         lap_heading_errors.clear()
+                        lap_yaw_rate_errors.clear()
+                        lap_sideslip_abs.clear()
+                        lap_raw_steer_commands.clear()
                         for values in band_lateral_errors:
                             values.clear()
                         for values in band_heading_errors:
+                            values.clear()
+                        for values in band_yaw_rate_errors:
+                            values.clear()
+                        for values in band_sideslip_abs:
                             values.clear()
                         for values in band_speed_errors:
                             values.clear()
@@ -2169,6 +2492,8 @@ def run_lap_loop(
                             band_p95_speed_error_kmh=list(
                                 band_p95_speed_errors
                             ),
+                            scan_metrics=scan_metrics,
+                            scan_candidate=scan_candidate,
                             before_parameters=before_parameters,
                             after_parameters=after_parameters,
                             planning_update=planning_update,
@@ -2197,13 +2522,54 @@ def run_lap_loop(
                             band_p95_speed_error_kmh=list(
                                 band_p95_speed_errors
                             ),
+                            scan_metrics=scan_metrics,
+                            scan_candidate=scan_candidate,
                             before_parameters=before_parameters,
                             after_parameters=before_parameters,
                         )
+                        if (
+                            lateral_scan_schedule
+                            and completed_lap_number < lap_limit
+                        ):
+                            next_scan_candidate = lateral_scan_schedule[
+                                completed_lap_number
+                            ]
+                            if next_scan_candidate is None:
+                                raise RuntimeError(
+                                    "Lateral scan schedule has no candidate "
+                                    f"for lap {completed_lap_number + 1}."
+                                )
+                            next_scan_candidate.apply(
+                                lap_controller.config
+                            )
+                            lap_controller.invalidate_plan_cache()
+                            print(
+                                "Lateral scan candidate "
+                                f"{next_scan_candidate.design_index}/"
+                                f"{len(lateral_scan_schedule)}: "
+                                f"{_summarize_scan_candidate(next_scan_candidate)}"
+                            )
+                        if (
+                            speed_calibration_schedule
+                            and completed_lap_number < lap_limit
+                        ):
+                            next_speed_candidate = (
+                                speed_calibration_schedule[
+                                    completed_lap_number
+                                ]
+                            )
+                            speed_scale_by_band = list(
+                                next_speed_candidate.speed_scale_by_band
+                            )
+                            print(
+                                "Speed calibration "
+                                f"{next_speed_candidate.design_index}/10: "
+                                f"band3={speed_scale_by_band[3]:.3f} "
+                                f"band6={speed_scale_by_band[6]:.3f}"
+                            )
                         print(
-                            f"Fixed-config lap {completed_lap_number} "
-                            f"complete; continuing to lap "
-                            f"{lap_number + 1}."
+                            f"Lap {completed_lap_number} complete; "
+                            f"continuing to lap {lap_number + 1}."
                         )
                         lap_number += 1
                         lap_started_at = now
@@ -2212,9 +2578,16 @@ def run_lap_loop(
                         lap_max_tyres_out = 0
                         lap_lateral_errors.clear()
                         lap_heading_errors.clear()
+                        lap_yaw_rate_errors.clear()
+                        lap_sideslip_abs.clear()
+                        lap_raw_steer_commands.clear()
                         for values in band_lateral_errors:
                             values.clear()
                         for values in band_heading_errors:
+                            values.clear()
+                        for values in band_yaw_rate_errors:
+                            values.clear()
+                        for values in band_sideslip_abs:
                             values.clear()
                         for values in band_speed_errors:
                             values.clear()
@@ -2251,6 +2624,8 @@ def run_lap_loop(
                         band_p95_speed_error_kmh=list(
                             band_p95_speed_errors
                         ),
+                        scan_metrics=scan_metrics,
+                        scan_candidate=scan_candidate,
                         before_parameters=before_parameters,
                         after_parameters=before_parameters,
                     )
@@ -2364,6 +2739,9 @@ def _write_run_metadata(
             "controllers.py": _sha256_file(
                 root / "actc" / "controllers.py"
             ),
+            "lateral_scan.py": _sha256_file(
+                root / "actc" / "lateral_scan.py"
+            ),
             "longitudinal.py": _sha256_file(
                 root / "actc" / "longitudinal.py"
             ),
@@ -2380,6 +2758,33 @@ def _write_run_metadata(
     metadata_path.parent.mkdir(parents=True, exist_ok=True)
     metadata_path.write_text(
         json.dumps(metadata, indent=2, ensure_ascii=True),
+        encoding="utf-8",
+    )
+
+
+def _write_lateral_scan_plan(
+    log_path: Path,
+    schedule: tuple[LateralScanCandidate, ...],
+) -> None:
+    payload = {
+        "design": "fixed_20_run_space_filling",
+        "metric_weights": {
+            "lateral_error": 0.30,
+            "heading_error": 0.20,
+            "shake": 0.20,
+            "yaw_rate_error": 0.20,
+            "sideslip": 0.10,
+        },
+        "candidates": [
+            candidate.as_dict() if candidate is not None else None
+            for candidate in schedule
+        ],
+    }
+    plan_path = log_path.with_name(
+        f"{log_path.stem}_scan_plan.json"
+    )
+    plan_path.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=True),
         encoding="utf-8",
     )
 def _scaled_path_speed_kmh(
@@ -2487,8 +2892,6 @@ def _build_longitudinal_preview(
     max_lateral_accel_mps2: float | None = None,
 ) -> list[float]:
     current_reference = max(0.5, target_speed_kmh / 3.6)
-    preview = [current_reference]
-    acceleration_step = max(0.5, acceleration_limit_mps2) * dt
     effective_braking_limit = (
         max(1.0, braking_limit_mps2)
         * _combined_braking_scale(
@@ -2497,6 +2900,19 @@ def _build_longitudinal_preview(
         )
     )
     ahead_indices = [index]
+    limit_preview = [
+        min(
+            current_reference,
+            _scaled_path_speed_kmh(
+                path,
+                index,
+                speed_scale_by_band,
+                max_speed_kmh=max_speed_kmh,
+                max_lateral_accel_mps2=max_lateral_accel_mps2,
+            )
+            / 3.6,
+        )
+    ]
     for stage in range(1, horizon + 1):
         ahead_index = path.lookahead_index(
             index,
@@ -2514,16 +2930,22 @@ def _build_longitudinal_preview(
             / 3.6
         )
         raw_reference = min(current_reference, raw_reference)
-        preview.append(
+        acceleration_capability = min(
+            max(0.5, acceleration_limit_mps2),
+            acceleration_capability_mps2(limit_preview[-1]),
+        )
+        limit_preview.append(
             min(
                 raw_reference,
-                preview[-1] + acceleration_step,
+                limit_preview[-1]
+                + acceleration_capability * dt,
             )
         )
 
-    # A downstream speed drop also constrains every earlier point. This keeps
-    # a local path-speed bump inside a braking zone from becoming a
-    # release-and-reapply pedal sequence.
+    # Build a physically reachable speed envelope. The backward pass applies
+    # the planning-brake capability at each speed, so the resulting profile
+    # uses strong braking close to the corner instead of spreading it
+    # uniformly over the entire preview horizon.
     for stage in range(horizon - 1, -1, -1):
         previous_index = ahead_indices[stage]
         next_index = ahead_indices[stage + 1]
@@ -2534,39 +2956,56 @@ def _build_longitudinal_preview(
         if distance_m < 0.0:
             distance_m += path.total_length_m
         distance_m = max(0.0, distance_m)
+        braking_capability = min(
+            effective_braking_limit,
+            planning_braking_capability_mps2(limit_preview[stage + 1]),
+        )
         previous_limit = math.sqrt(
-            preview[stage + 1] ** 2
-            + 2.0 * effective_braking_limit * distance_m
+            limit_preview[stage + 1] ** 2
+            + 2.0 * braking_capability * distance_m
         )
-        preview[stage] = min(preview[stage], previous_limit)
+        limit_preview[stage] = min(
+            limit_preview[stage],
+            previous_limit,
+        )
 
-    # Make the reference executable from the current speed. A chain of speed
-    # limits alone lets the MPC delay braking because it can always satisfy
-    # the final preview point with a short, hard stop. A continuous
-    # acceleration profile keeps the braking intent connected across stages.
-    limit_preview = list(preview)
-    minimum_stage = min(
-        range(horizon + 1),
-        key=lambda stage: limit_preview[stage],
+    preview = list(limit_preview)
+    preview[0] = min(
+        current_reference,
+        max(0.5, speed_mps),
     )
-    terminal_reference = limit_preview[minimum_stage]
-    braking_time_s = max(dt * minimum_stage, 1e-3)
-    required_acceleration = clamp(
-        (terminal_reference - max(0.5, speed_mps)) / braking_time_s,
-        -effective_braking_limit,
-        max(0.5, acceleration_limit_mps2),
-    )
-    for stage in range(minimum_stage + 1):
-        shaped_reference = max(
-            0.5,
-            speed_mps + required_acceleration * dt * stage,
+    for stage in range(1, horizon + 1):
+        previous_index = ahead_indices[stage - 1]
+        next_index = ahead_indices[stage]
+        distance_m = (
+            path.cumulative_s[next_index]
+            - path.cumulative_s[previous_index]
         )
-        preview[stage] = min(limit_preview[stage], shaped_reference)
-    for stage in range(minimum_stage + 1, horizon + 1):
+        if distance_m < 0.0:
+            distance_m += path.total_length_m
+        braking_capability = min(
+            effective_braking_limit,
+            planning_braking_capability_mps2(preview[stage - 1]),
+        )
+        reachable_after_braking = math.sqrt(
+            max(
+                0.0,
+                preview[stage - 1] ** 2
+                - 2.0 * braking_capability * max(0.0, distance_m),
+            )
+        )
+        preview[stage] = min(
+            preview[stage],
+            reachable_after_braking,
+        )
+        acceleration_capability = min(
+            max(0.5, acceleration_limit_mps2),
+            acceleration_capability_mps2(preview[stage - 1]),
+        )
         preview[stage] = min(
             limit_preview[stage],
             preview[stage - 1]
-            + max(0.5, acceleration_limit_mps2) * dt,
+            + acceleration_capability * dt,
         )
     return preview
 
@@ -2653,7 +3092,13 @@ def _braking_limited_speed_kmh(
         ahead_limit_ms = ahead_limit_kmh / 3.6
         braking_accel = max(
             1.0,
-            braking_accel_by_band[band] * safety_factor,
+            min(
+                braking_accel_by_band[band],
+                planning_braking_capability_mps2(
+                    ahead_limit_ms,
+                ),
+            )
+            * safety_factor,
         )
         effective_ds = max(
             0.0,
@@ -2773,8 +3218,18 @@ def _controller_parameter_snapshot(
     elif isinstance(controller, LinearMpcController):
         snapshot["controller_type"] = "lmpc"
         snapshot["controller"] = {
+            "coordinate_frame": controller.config.coordinate_frame,
             "q_lateral": controller.config.q_lateral,
             "q_heading": controller.config.q_heading,
+            "q_longitudinal_position": (
+                controller.config.q_longitudinal_position
+            ),
+            "curvature_feedforward_gain": (
+                controller.config.curvature_feedforward_gain
+            ),
+            "curvature_smoothing_m": (
+                controller.config.curvature_smoothing_m
+            ),
             "q_speed": controller.config.q_speed,
             "q_lateral_velocity": (
                 controller.config.q_lateral_velocity
@@ -2827,6 +3282,12 @@ def _controller_parameter_snapshot(
             ),
             "rd_steer_weight_map": list(
                 controller.config.rd_steer_weight_map
+            ),
+            "curvature_feedforward_map_kmh": list(
+                controller.config.curvature_feedforward_map_kmh
+            ),
+            "curvature_feedforward_map": list(
+                controller.config.curvature_feedforward_map
             ),
             "steer_lateral_gain_map": list(
                 controller.config.parameters.steer_lateral_gain_map
@@ -2936,6 +3397,17 @@ def _summarize_lmpc_parameters(controller) -> str:
         f"q_yaw={config.q_yaw_rate:.2f},"
         f"r_steer={config.r_steer:.2f},"
         f"rd_steer={config.rd_steer:.1f}"
+    )
+
+
+def _summarize_scan_candidate(candidate: LateralScanCandidate) -> str:
+    return (
+        f"q_lat={candidate.q_lateral:.2f},"
+        f"q_head={candidate.q_heading:.2f},"
+        f"q_yaw={candidate.q_yaw_rate:.2f},"
+        f"q_latvel={candidate.q_lateral_velocity:.2f},"
+        f"r_steer={candidate.r_steer:.2f},"
+        f"rd_steer={candidate.rd_steer:.1f}"
     )
 
 
@@ -3501,6 +3973,8 @@ def _write_lap_summary(
     band_p95_speed_error_kmh: list[float],
     before_parameters: dict[str, float],
     after_parameters: dict[str, float],
+    scan_metrics: LapScanMetrics | None = None,
+    scan_candidate: LateralScanCandidate | None = None,
     planning_update: PlanningUpdate | None = None,
 ) -> None:
     if handle is None:
@@ -3520,6 +3994,16 @@ def _write_lap_summary(
         "band_p95_lateral_g": band_p95_lateral_g,
         "band_p95_longitudinal_g": band_p95_longitudinal_g,
         "band_p95_speed_error_kmh": band_p95_speed_error_kmh,
+        "scan_metrics": (
+            scan_metrics.as_dict()
+            if scan_metrics is not None
+            else None
+        ),
+        "scan_candidate": (
+            scan_candidate.as_dict()
+            if scan_candidate is not None
+            else None
+        ),
         "before": before_parameters,
         "after": after_parameters,
     }

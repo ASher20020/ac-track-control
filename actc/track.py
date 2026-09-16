@@ -10,6 +10,11 @@ from pathlib import Path
 import numpy as np
 from scipy.interpolate import CubicSpline
 
+from .capabilities import (
+    acceleration_capability_mps2,
+    planning_braking_capability_mps2,
+)
+
 
 def clamp(value: float, lower: float, upper: float) -> float:
     return max(lower, min(upper, value))
@@ -1104,7 +1109,10 @@ def _speed_limits_from_geometry(
     for _ in range(5):
         for index in range(count):
             previous = (index - 1) % count
-            effective_accel = accel_mps2
+            effective_accel = min(
+                max(0.0, accel_mps2),
+                acceleration_capability_mps2(speed[previous]),
+            )
             if use_friction_ellipse:
                 lateral_usage = clamp(
                     speed[previous] ** 2
@@ -1149,10 +1157,14 @@ def _speed_limits_from_geometry(
                 1.0,
                 brake_point_shift_reference_distance_m,
             )
-            effective_brake = brake_mps2 * clamp(
-                1.0 + brake_point_shift_m / reference_distance,
-                1.0,
-                2.0,
+            effective_brake = min(
+                max(0.0, brake_mps2)
+                * clamp(
+                    1.0 + brake_point_shift_m / reference_distance,
+                    1.0,
+                    2.0,
+                ),
+                planning_braking_capability_mps2(speed[following]),
             )
             if use_friction_ellipse:
                 lateral_usage = clamp(

@@ -31,6 +31,7 @@ from actc.cli import (
     _scaled_path_speed_kmh,
     _tune_gain_maps,
 )
+from actc.capabilities import acceleration_capability_mps2
 from actc.mpc import MpcConfig
 from actc.track import (
     TrackPath,
@@ -373,6 +374,33 @@ class TrackControllerGeometryTests(unittest.TestCase):
             )
         )
 
+    def test_longitudinal_preview_uses_speed_dependent_acceleration(
+        self,
+    ) -> None:
+        path = TrackPath.from_points(
+            [(float(index), 0.0) for index in range(300)],
+            [220.0] * 300,
+        )
+        preview = _build_longitudinal_preview(
+            path,
+            0,
+            target_speed_kmh=220.0,
+            speed_mps=150.0 / 3.6,
+            horizon=40,
+            dt=0.05,
+            acceleration_limit_mps2=7.0,
+            braking_limit_mps2=20.0,
+            speed_scale_by_band=[1.0, 1.0, 1.0, 1.0],
+            steering=0.0,
+            lateral_g=0.0,
+        )
+        for current, following in zip(preview, preview[1:]):
+            capability = acceleration_capability_mps2(current)
+            self.assertLessEqual(
+                following - current,
+                capability * 0.05 + 1e-9,
+            )
+
     def test_longitudinal_preview_respects_fixed_limits(self) -> None:
         path = TrackPath.from_points(
             [(float(index), 0.0) for index in range(300)],
@@ -435,6 +463,47 @@ class TrackControllerGeometryTests(unittest.TestCase):
                 for current, following in zip(preview, preview[1:])
             )
         )
+
+    def test_longitudinal_preview_uses_late_braking_capability(
+        self,
+    ) -> None:
+        speeds = [200.0] * 80 + [60.0] * 80
+        path = TrackPath.from_points(
+            [(float(index), 0.0) for index in range(160)],
+            speeds,
+        )
+        common = dict(
+            target_speed_kmh=200.0,
+            speed_mps=150.0 / 3.6,
+            horizon=40,
+            dt=0.05,
+            acceleration_limit_mps2=5.0,
+            speed_scale_by_band=[1.0] * 9,
+            steering=0.0,
+            lateral_g=0.0,
+        )
+        moderate = _build_longitudinal_preview(
+            path,
+            0,
+            braking_limit_mps2=10.0,
+            **common,
+        )
+        strong = _build_longitudinal_preview(
+            path,
+            0,
+            braking_limit_mps2=18.0,
+            **common,
+        )
+        self.assertGreater(strong[18], moderate[18])
+        moderate_decel = min(
+            later - earlier
+            for earlier, later in zip(moderate, moderate[1:])
+        )
+        strong_decel = min(
+            later - earlier
+            for earlier, later in zip(strong, strong[1:])
+        )
+        self.assertLess(strong_decel, moderate_decel)
 
     def test_braking_lead_distance_moves_limit_earlier(self) -> None:
         speeds = [120.0] * 120 + [30.0] * 120

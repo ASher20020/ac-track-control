@@ -1,0 +1,29 @@
+{
+  "saved_on": "2026-09-16",
+  "status": "candidate_pending_test",
+  "track": "ks_nordschleife",
+  "config": "configs/final/nordschleife_frenet_refine_103_candidate_v2.json",
+  "line_offset_envelope": "configs/line_offsets/nordschleife_candidate_v2.json",
+  "speed_envelope": "configs/speed_envelopes/nordschleife_candidate_v2.json",
+  "changes": {
+    "s_0.750_0.758": {
+      "line_offset_m": -0.7,
+      "speed_reduction_kmh": 8.0
+    },
+    "s_0.910_0.930": {
+      "line_offset_m": 0.0,
+      "speed_reduction_kmh": 10.0
+    }
+  },
+  "base_parameters": {
+    "target_lateral_accel_g": 0.74,
+    "planning_braking_mps2": 15.3,
+    "target_fall_kmh_s": 188,
+    "q_lateral": 11.5,
+    "q_heading": 135.0,
+    "q_lateral_velocity": 3.5,
+    "q_yaw_rate": 28.0,
+    "r_steer": 15.0,
+    "rd_steer": 700.0
+  }
+}

@@ -82,7 +82,9 @@ def make_controller(
     for key, value in (overrides or {}).items():
         if hasattr(config, key):
             setattr(config, key, value)
-    if name == "lmpc":
+    if name in {"lmpc", "lmpc-cartesian"}:
+        if name == "lmpc-cartesian":
+            config.coordinate_frame = "cartesian"
         return LinearMpcController(config)
     if name == "nmpc":
         return NonlinearMpcController(config)
@@ -235,7 +237,7 @@ def main() -> int:
     parser.add_argument(
         "--controllers",
         nargs="+",
-        choices=("stanley", "lmpc", "nmpc"),
+        choices=("stanley", "lmpc", "lmpc-cartesian", "nmpc"),
         default=("stanley", "lmpc", "nmpc"),
     )
     parser.add_argument("--duration", type=float, default=90.0)
@@ -249,7 +251,12 @@ def main() -> int:
         str(key): float(value)
         for key, value in json.loads(args.lmpc_params).items()
     }
-    strides = {"stanley": 1, "lmpc": 1, "nmpc": 10}
+    strides = {
+        "stanley": 1,
+        "lmpc": 1,
+        "lmpc-cartesian": 1,
+        "nmpc": 10,
+    }
     for name in args.controllers:
         result = run_controller(
             name,

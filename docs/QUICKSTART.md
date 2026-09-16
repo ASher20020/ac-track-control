@@ -29,7 +29,7 @@ Run the focused regression suite:
 python -m unittest discover -s tests -v
 ```
 
-The expected baseline is `72` passing tests.
+The expected baseline is `94` passing tests.
 
 ## Prepare AC input
 
@@ -51,14 +51,14 @@ Use the current AC session's track. The launcher detects the loaded track and
 resolves `fast_lane.ai` from `race.ini`; it does not accept a track override.
 
 ```powershell
-# Shanghai final candidate: V64, 300 km/h, full braking table
-.\tools\start_v64_shanghai.ps1
+# Shanghai local-line60 candidate
+.\tools\start_shanghai_frenet_refine_103_latest.ps1
 
-# Zhejiang final candidate: V59 speed strategy, synchronized longitudinal MPC
-.\tools\start_zhejiang_final.ps1
+# Zhejiang local055 candidate
+.\tools\start_zhejiang_refine_103_brake130_fastfall.ps1
 
-# Nordschleife safe candidate: 1.2 m line clearance and 1.02 g scaled-speed cap
-.\tools\start_nordschleife_v2_safe.ps1
+# Nordschleife synchronized candidate
+.\tools\start_nordschleife_refine_103_sync.ps1
 ```
 
 Each launcher starts a hidden Python process and writes three files under

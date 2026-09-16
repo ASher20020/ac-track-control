@@ -1,0 +1,37 @@
+{
+  "saved_on": "2026-09-16",
+  "status": "user_confirmed_perfect_lap",
+  "track": "st_zhejiang",
+  "config": "configs/final/zhejiang_frenet_local055_perfect.json",
+  "speed_envelope": "configs/speed_envelopes/zhejiang_local_055.json",
+  "log": "logs/lmpc_zhejiang_refine_103_brake130_fastfall_cap17_acc_cal_local055.csv",
+  "lap_summary": "logs/lmpc_zhejiang_refine_103_brake130_fastfall_cap17_acc_cal_local055_laps.jsonl",
+  "verified_lap": {
+    "lap_number": 2,
+    "lap_time_s": 96.28,
+    "p95_lateral_error_m": 1.53,
+    "p95_heading_error_rad": 0.10,
+    "max_tyres_out": 2
+  },
+  "controller": {
+    "q_lateral": 11.5,
+    "q_heading": 135.0,
+    "q_lateral_velocity": 3.5,
+    "q_yaw_rate": 28.0,
+    "r_steer": 15.0,
+    "rd_steer": 700.0
+  },
+  "longitudinal": {
+    "q_speed": 30.0,
+    "q_accel": 1.5,
+    "r_accel": 0.3,
+    "r_jerk": 20.0,
+    "max_brake_mps2": 52.0
+  },
+  "planning": {
+    "target_lateral_accel_g": 0.85,
+    "target_edge_clearance_m": 1.0,
+    "hard_edge_clearance_m": 0.8,
+    "local_speed_envelope": "only s=0.470..0.545, maximum reduction 6 km/h"
+  }
+}
