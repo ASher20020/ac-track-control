@@ -44,8 +44,6 @@ Assetto Corsa
 | Zhejiang | `1:36.245` | 2 | 103 weights + local055 speed envelope |
 | Nordschleife | `7:52.546` | 2 | corrected crossing-to-crossing time |
 
-![Latest validated configurations](../assets/figures/latest_track_results.png)
-
 ### 1.1.1 横向标定
 
 浙赛从 V6 到 V7 的横向权重变化：
@@ -120,8 +118,6 @@ flowchart LR
 | Shanghai local-line60 | 1.000 | 0.791 | 13.03 m/s² |
 | Zhejiang local055 | 0.983 | 0.745 | 12.64 m/s² |
 | Nordschleife sync | 0.907 | 0.513 | 9.72 m/s² |
-
-![Longitudinal braking upgrade](../assets/figures/longitudinal_braking_upgrade.png)
 
 规划加速能力也改为实测 P90 包络：
 

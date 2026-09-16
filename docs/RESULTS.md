@@ -17,11 +17,7 @@ Tyres:   Michelin PS4 Cup 2
 | Zhejiang | 94.329 s | 96.245 s | +1.917 s | 280 km/h cap | 2 | local055 user-confirmed candidate |
 | Nordschleife | 7:17.632 | 7:52.546 | +34.914 s | 300 km/h cap | 2 | corrected crossing-to-crossing result |
 
-![Latest validated configurations](../assets/figures/latest_track_results.png)
-
 ![Zhejiang lateral calibration](../assets/figures/lateral_calibration_zhejiang.png)
-
-![Longitudinal braking upgrade](../assets/figures/longitudinal_braking_upgrade.png)
 
 ## Latest configuration decisions
 

@@ -19,136 +19,233 @@ def _style() -> None:
 
 
 def build_lateral_calibration() -> None:
-    labels = ["Yaw err\nP95", "Heading err\nP95", "Raw steer\nstep mean", "Sideslip\nRMS"]
-    v6 = np.array([0.2672, 0.1202, 0.002993, 0.01280])
-    v7 = np.array([0.1896, 0.1040, 0.001963, 0.01211])
-    v6_norm = v6 / v6
-    v7_norm = v7 / v6
+    metrics = (
+        {
+            "label": "Yaw error P95",
+            "v6": 0.2672,
+            "v7": 0.1896,
+            "unit": "rad/s",
+            "color": THEME["cyan"],
+        },
+        {
+            "label": "Heading error P95",
+            "v6": 0.1202,
+            "v7": 0.1040,
+            "unit": "rad",
+            "color": THEME["blue"],
+        },
+        {
+            "label": "Raw steer step mean",
+            "v6": 0.002993,
+            "v7": 0.001963,
+            "unit": "normalized",
+            "color": THEME["orange"],
+        },
+        {
+            "label": "Sideslip RMS",
+            "v6": 0.01280,
+            "v7": 0.01211,
+            "unit": "rad",
+            "color": THEME["green"],
+        },
+    )
 
-    x = np.arange(len(labels))
-    width = 0.34
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, (ax, summary) = plt.subplots(
+        1,
+        2,
+        figsize=(14, 6.6),
+        gridspec_kw={"width_ratios": [3.0, 1.18], "wspace": 0.10},
+        facecolor=THEME["navy"],
+    )
     fig.patch.set_facecolor(THEME["navy"])
     ax.set_facecolor(THEME["navy"])
-    ax.bar(
-        x - width / 2,
-        v6_norm,
-        width,
-        label="V6",
-        color=THEME["blue"],
+    summary.set_facecolor(THEME["navy"])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0.62, 1.02)
+    ax.axis("off")
+
+    fig.text(
+        0.045,
+        0.94,
+        "Lateral calibration | Zhejiang V6 -> V7",
+        ha="left",
+        va="top",
+        color=THEME["ink"],
+        fontsize=20,
+        fontweight="bold",
     )
-    ax.bar(
-        x + width / 2,
-        v7_norm,
-        width,
-        label="V7 refined",
+    fig.text(
+        0.045,
+        0.885,
+        "Every response is normalized to the V6 run; lower is better.",
+        ha="left",
+        va="top",
+        color=THEME["muted"],
+        fontsize=10.5,
+    )
+    ax.axhline(
+        1.0,
+        color=THEME["grid"],
+        linestyle=(0, (5, 5)),
+        linewidth=1.0,
+    )
+    ax.text(
+        0.74,
+        1.012,
+        "V6 = 100%",
+        ha="right",
+        va="bottom",
+        color=THEME["muted"],
+        fontsize=9.5,
+    )
+
+    x_v6 = 0.43
+    x_v7 = 0.61
+    ax.text(
+        x_v6,
+        0.675,
+        "V6 BASELINE",
+        ha="center",
+        color=THEME["muted"],
+        fontsize=9.5,
+        fontweight="bold",
+    )
+    ax.text(
+        x_v7,
+        0.675,
+        "V7 REFINED",
+        ha="center",
         color=THEME["orange"],
+        fontsize=9.5,
+        fontweight="bold",
     )
-    for index, ratio in enumerate(v7_norm):
-        ax.text(
-            index + width / 2,
-            ratio + 0.025,
-            f"{ratio * 100:.1f}%",
-            ha="center",
-            color="#F4F7FB",
-            fontsize=10,
+
+    for item in metrics:
+        ratio = item["v7"] / item["v6"]
+        improvement = (1.0 - ratio) * 100.0
+        ax.plot(
+            [x_v6, x_v7],
+            [1.0, ratio],
+            color=item["color"],
+            linewidth=3.0,
+            alpha=0.78,
+            solid_capstyle="round",
+            zorder=2,
         )
-    ax.axhline(1.0, color=THEME["grid"], linestyle="--", linewidth=1)
-    ax.set_xticks(x, labels)
-    ax.set_ylabel("Normalized to V6")
-    ax.set_title(
-        "Zhejiang lateral calibration: V7 keeps tracking while reducing yaw and steering activity"
+        ax.scatter(
+            [x_v7],
+            [ratio],
+            s=76,
+            facecolor=item["color"],
+            edgecolor=THEME["navy"],
+            linewidth=1.8,
+            zorder=4,
+        )
+        ax.text(
+            x_v7 + 0.025,
+            ratio,
+            f"{improvement:.1f}% lower",
+            ha="left",
+            va="center",
+            color=item["color"],
+            fontsize=11,
+            fontweight="bold",
+        )
+        ax.text(
+            0.02,
+            ratio,
+            item["label"],
+            ha="left",
+            va="center",
+            color=THEME["ink"],
+            fontsize=11,
+            fontweight="bold",
+        )
+        if item["unit"] == "normalized":
+            value_label = f"{item['v7']:.6f}"
+        else:
+            value_label = f"{item['v7']:.4f} {item['unit']}"
+        ax.text(
+            0.98,
+            ratio,
+            value_label,
+            ha="right",
+            va="center",
+            color=THEME["muted"],
+            fontsize=9.5,
+        )
+
+    summary.set_xlim(0, 1)
+    summary.set_ylim(0, 1)
+    summary.axis("off")
+    summary.add_patch(
+        FancyBboxPatch(
+            (0.04, 0.09),
+            0.92,
+            0.80,
+            boxstyle="round,pad=0.025,rounding_size=0.035",
+            linewidth=1.4,
+            edgecolor=THEME["border"],
+            facecolor=THEME["white"],
+        )
     )
-    ax.legend(frameon=False)
-    fig.tight_layout()
+    summary.text(
+        0.12,
+        0.81,
+        "CONTROL RESPONSE",
+        color=THEME["cyan"],
+        fontsize=10.5,
+        fontweight="bold",
+    )
+    summary.text(
+        0.12,
+        0.69,
+        "Less correction",
+        color=THEME["ink"],
+        fontsize=18,
+        fontweight="bold",
+    )
+    summary.text(
+        0.12,
+        0.60,
+        "for the same path",
+        color=THEME["muted"],
+        fontsize=12,
+    )
+    summary.plot(
+        [0.12, 0.88],
+        [0.53, 0.53],
+        color=THEME["grid"],
+        linewidth=1.2,
+    )
+    highlights = (
+        ("-29.0%", "yaw error P95"),
+        ("-34.4%", "raw steer activity"),
+        ("-5.4%", "sideslip RMS"),
+    )
+    for index, (value, label) in enumerate(highlights):
+        y = 0.43 - index * 0.11
+        summary.text(
+            0.12,
+            y,
+            value,
+            color=THEME["orange"] if index == 0 else THEME["ink"],
+            fontsize=15,
+            fontweight="bold",
+        )
+        summary.text(
+            0.44,
+            y,
+            label,
+            color=THEME["muted"],
+            fontsize=10.5,
+            va="center",
+        )
+
+    fig.subplots_adjust(left=0.055, right=0.985, top=0.82, bottom=0.08)
     fig.savefig(
         FIGURE_DIR / "lateral_calibration_zhejiang.png",
-        dpi=170,
-        facecolor=fig.get_facecolor(),
-    )
-    plt.close(fig)
-
-
-def build_braking_upgrade() -> None:
-    labels = ["Max brake", "P95 brake", "Peak decel"]
-    before = np.array([0.58, 0.474, 9.9])
-    zhejiang = np.array([0.983, 0.745, 12.64])
-    shanghai = np.array([1.0, 0.791, 13.03])
-    nordschleife = np.array([0.907, 0.513, 9.72])
-
-    x = np.arange(len(labels))
-    width = 0.19
-    fig, ax = plt.subplots(figsize=(12, 6))
-    fig.patch.set_facecolor(THEME["navy"])
-    ax.set_facecolor(THEME["navy"])
-    for offset, values, label, color in (
-        (-1.5, before, "Before", THEME["muted"]),
-        (-0.5, zhejiang, "Zhejiang local055", THEME["orange"]),
-        (0.5, shanghai, "Shanghai line60", THEME["blue"]),
-        (1.5, nordschleife, "Nordschleife sync", THEME["green"]),
-    ):
-        plotted = values / before
-        ax.bar(
-            x + offset * width,
-            plotted,
-            width,
-            label=label,
-            color=color,
-        )
-    ax.axhline(1.0, color=THEME["grid"], linestyle="--", linewidth=1)
-    ax.set_xticks(x, labels)
-    ax.set_ylabel("Normalized to pre-fix run")
-    ax.set_title(
-        "Longitudinal braking upgrade: target, preview and pedal are now connected"
-    )
-    ax.legend(frameon=False, ncol=2)
-    fig.tight_layout()
-    fig.savefig(
-        FIGURE_DIR / "longitudinal_braking_upgrade.png",
-        dpi=170,
-        facecolor=fig.get_facecolor(),
-    )
-    plt.close(fig)
-
-
-def build_latest_track_results() -> None:
-    labels = ["Shanghai\nline60", "Zhejiang\nlocal055", "Nordschleife\ncorrected"]
-    lap_times = np.array([134.399, 96.245, 472.546])
-    tyres = np.array([1, 2, 2])
-
-    fig, ax = plt.subplots(figsize=(11, 5.6))
-    fig.patch.set_facecolor(THEME["navy"])
-    ax.set_facecolor(THEME["navy"])
-    bars = ax.bar(
-        labels,
-        lap_times,
-        color=[THEME["blue"], THEME["orange"], THEME["green"]],
-        width=0.58,
-    )
-    for bar, seconds, out in zip(bars, lap_times, tyres):
-        minutes = int(seconds // 60)
-        remainder = seconds - 60 * minutes
-        label = (
-            f"{minutes}:{remainder:06.3f}"
-            if minutes
-            else f"{remainder:.3f} s"
-        )
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            seconds + 8,
-            f"{label}\ntyres out {out}",
-            ha="center",
-            va="bottom",
-            color="#F4F7FB",
-            fontsize=11,
-        )
-    ax.set_ylabel("Lap time (s)")
-    ax.set_title("Latest validated configurations")
-    ax.set_ylim(0, 540)
-    fig.tight_layout()
-    fig.savefig(
-        FIGURE_DIR / "latest_track_results.png",
-        dpi=170,
+        dpi=180,
         facecolor=fig.get_facecolor(),
     )
     plt.close(fig)
@@ -233,8 +330,6 @@ def main() -> int:
     _style()
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     build_lateral_calibration()
-    build_braking_upgrade()
-    build_latest_track_results()
     build_tuning_pipeline()
     print("Wrote evening summary figures")
     return 0

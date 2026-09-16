@@ -417,30 +417,30 @@ def build_track_maps() -> None:
     specs = [
         {
             "name": "Shanghai",
-            "human_path": PROJECT_ROOT / "logs" / "vehicle_dynamics_reference_20min.csv",
             "auto_path": PROJECT_ROOT / "logs" / "lmpc_shanghai_frenet_refine_103_latest_local_line60.csv",
-            "human_label": f"Human {_format_lap_time(136.247968)}",
-            "auto_label": f"Auto {_format_lap_time(134.399)}",
+            "display_time": 134.399,
+            "human_time": 136.248,
+            "gap_s": -1.849,
             "color": COLORS["blue"],
             "track_name": "tr_shanghai",
             "configuration": "advanced",
         },
         {
             "name": "Zhejiang",
-            "human_path": PROJECT_ROOT / "logs" / "manual_reference_v49_moza.csv",
             "auto_path": PROJECT_ROOT / "logs" / "lmpc_zhejiang_refine_103_brake130_fastfall_cap17_acc_cal_local055.csv",
-            "human_label": f"Human {_format_lap_time(94.328507)}",
-            "auto_label": f"Auto {_format_lap_time(96.245)}",
+            "display_time": 96.245,
+            "human_time": 94.329,
+            "gap_s": 1.917,
             "color": COLORS["green"],
             "track_name": "st_zhejiang",
             "configuration": "layout_main",
         },
         {
             "name": "Nordschleife",
-            "human_path": None,
             "auto_path": PROJECT_ROOT / "logs" / "lmpc_nordschleife_frenet_refine_103_sync_replay.csv",
-            "human_label": f"Human {_format_lap_time(437.632)}",
-            "auto_label": f"Auto {_format_lap_time(472.546)}",
+            "display_time": 472.546,
+            "human_time": 437.632,
+            "gap_s": 34.914,
             "color": COLORS["orange"],
             "track_name": "ks_nordschleife",
             "configuration": "nordschleife",
@@ -450,17 +450,27 @@ def build_track_maps() -> None:
     fig, axes = plt.subplots(
         1,
         3,
-        figsize=(17, 6.8),
+        figsize=(17, 7.2),
         facecolor=COLORS["paper"],
     )
     speed_min = 0.0
     speed_max = 300.0
     norm = Normalize(vmin=speed_min, vmax=speed_max)
 
+    fig.subplots_adjust(
+        left=0.035,
+        right=0.985,
+        top=0.82,
+        bottom=0.28,
+        wspace=0.08,
+    )
+
     for ax, spec in zip(axes, specs):
-        auto_time, auto_lap = _load_fastest_lap(
-            Path(spec["auto_path"]),
-            automatic=True,
+        auto_frame = pd.read_csv(Path(spec["auto_path"])).sort_values("timestamp")
+        auto_time, auto_lap = find_manual_fastest_lap(
+            auto_frame,
+            minimum_duration_s=60.0,
+            maximum_duration_s=700.0,
         )
         track_path = _load_track_path(
             str(spec["track_name"]),
@@ -469,12 +479,6 @@ def build_track_maps() -> None:
         path_points = np.asarray(track_path.points, dtype=float)
         auto_speed = _speed_on_path(auto_lap, track_path)
         frames = [pd.DataFrame(path_points, columns=["position_x", "position_z"])]
-        human_lap = None
-        if spec["human_path"] is not None:
-            _, human_lap = _load_fastest_lap(
-                Path(spec["human_path"]),
-                automatic=False,
-            )
         if spec["name"] == "Nordschleife":
             center = np.zeros(2, dtype=float)
             basis = np.eye(2, dtype=float)
@@ -485,29 +489,17 @@ def build_track_maps() -> None:
         ax.set_facecolor(COLORS["white"])
         for spine in ax.spines.values():
             spine.set_color(COLORS["grid"])
+            spine.set_linewidth(1.0)
         ax.set_xticks([])
         ax.set_yticks([])
-
-        all_points = [auto_points]
-        if human_lap is not None:
-            ax.plot(
-                auto_points[:, 0],
-                auto_points[:, 1],
-                color="#BCC6D4",
-                linewidth=1.35,
-                alpha=0.85,
-                zorder=1,
-            )
-        if spec["human_label"]:
-            ax.text(
-                0.0,
-                -0.075,
-                spec["human_label"],
-                transform=ax.transAxes,
-                fontsize=9.5,
-                color=COLORS["muted"],
-                va="top",
-            )
+        ax.plot(
+            auto_points[:, 0],
+            auto_points[:, 1],
+            color="#020A12",
+            linewidth=5.2,
+            alpha=0.72,
+            zorder=1,
+        )
 
         _draw_speed_track(
             ax,
@@ -527,7 +519,7 @@ def build_track_maps() -> None:
             zorder=5,
         )
 
-        joined = np.vstack(all_points)
+        joined = auto_points
         span_x = max(np.ptp(joined[:, 0]), 1.0)
         span_y = max(np.ptp(joined[:, 1]), 1.0)
         ax.set_xlim(
@@ -549,43 +541,65 @@ def build_track_maps() -> None:
         )
         ax.text(
             0.0,
-            -0.125,
-            spec["auto_label"],
+            -0.075,
+            f"AUTO {_format_lap_time(float(spec['display_time']))}",
             transform=ax.transAxes,
-            fontsize=9.8,
+            fontsize=11.5,
             color=spec["color"],
             fontweight="bold",
             va="top",
+            clip_on=False,
+        )
+        ax.text(
+            0.0,
+            -0.135,
+            f"HUMAN {_format_lap_time(float(spec['human_time']))}",
+            transform=ax.transAxes,
+            fontsize=9.5,
+            color=COLORS["muted"],
+            va="top",
+            clip_on=False,
+        )
+        gap = float(spec["gap_s"])
+        ax.text(
+            0.0,
+            -0.195,
+            f"GAP {gap:+.3f} s",
+            transform=ax.transAxes,
+            fontsize=9.5,
+            color=COLORS["ink"],
+            va="top",
+            clip_on=False,
         )
 
     scalar = plt.cm.ScalarMappable(norm=norm, cmap=SPEED_CMAP)
     scalar.set_array([])
+    colorbar_axis = fig.add_axes((0.20, 0.068, 0.60, 0.018))
     colorbar = fig.colorbar(
         scalar,
-        ax=axes,
+        cax=colorbar_axis,
         orientation="horizontal",
-        fraction=0.047,
-        pad=0.045,
-        aspect=45,
     )
-    colorbar.set_label("speed [km/h]", color=COLORS["muted"])
-    colorbar.ax.tick_params(colors=COLORS["muted"])
+    colorbar.ax.tick_params(colors=COLORS["muted"], labelsize=8.5)
     colorbar.outline.set_edgecolor(COLORS["grid"])
-    fig.suptitle(
-        "Measured track trajectories and speed distribution",
-        x=0.055,
-        y=0.98,
+    fig.text(
+        0.035,
+        0.945,
+        "Lap speed distribution | measured closed-loop runs",
         ha="left",
+        va="top",
         fontsize=21,
         fontweight="bold",
         color=COLORS["ink"],
     )
-    fig.subplots_adjust(
-        left=0.035,
-        right=0.98,
-        top=0.90,
-        bottom=0.22,
-        wspace=0.12,
+    fig.text(
+        0.035,
+        0.902,
+        "Full fast-lane geometry | fixed 0-300 km/h scale | crossing-to-crossing lap times",
+        ha="left",
+        va="top",
+        fontsize=10,
+        color=COLORS["muted"],
     )
     fig.savefig(FIGURE_DIR / "track_maps.png", dpi=180)
     plt.close(fig)

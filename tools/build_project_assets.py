@@ -82,187 +82,49 @@ def _arrow(
     )
 
 
-def _draw_controller_icon(
-    ax: plt.Axes,
-    x: float,
-    y: float,
-    color: str,
-) -> None:
-    ax.add_patch(
-        FancyBboxPatch(
-            (x, y),
-            0.55,
-            0.30,
-            boxstyle="round,pad=0.015,rounding_size=0.05",
-            linewidth=1.4,
-            edgecolor=color,
-            facecolor=COLORS["white"],
-        )
-    )
-    ax.add_patch(plt.Circle((x + 0.14, y + 0.15), 0.045, color=color))
-    ax.add_patch(plt.Circle((x + 0.42, y + 0.19), 0.035, color=color))
-    ax.add_patch(plt.Circle((x + 0.42, y + 0.10), 0.035, color=color))
-
-
-def _draw_car_icon(
-    ax: plt.Axes,
-    x: float,
-    y: float,
-    color: str,
-) -> None:
-    ax.add_patch(
-        FancyBboxPatch(
-            (x, y),
-            0.24,
-            0.52,
-            boxstyle="round,pad=0.008,rounding_size=0.05",
-            linewidth=1.4,
-            edgecolor=color,
-            facecolor="#FFF8E7",
-        )
-    )
-    for wheel_y in (y + 0.05, y + 0.39):
-        ax.add_patch(
-            FancyBboxPatch(
-                (x - 0.07, wheel_y),
-                0.07,
-                0.12,
-                boxstyle="round,pad=0.006,rounding_size=0.02",
-                linewidth=0,
-                facecolor=color,
-            )
-        )
-        ax.add_patch(
-            FancyBboxPatch(
-                (x + 0.24, wheel_y),
-                0.07,
-                0.12,
-                boxstyle="round,pad=0.006,rounding_size=0.02",
-                linewidth=0,
-                facecolor=color,
-            )
-        )
-    _arrow(
-        ax,
-        (x + 0.12, y + 0.58),
-        (x + 0.12, y + 0.78),
-        color=color,
-    )
-
-
-def _draw_monitor_icon(
-    ax: plt.Axes,
-    x: float,
-    y: float,
-    color: str,
-) -> None:
-    ax.add_patch(
-        FancyBboxPatch(
-            (x, y),
-            0.65,
-            0.40,
-            boxstyle="round,pad=0.01,rounding_size=0.025",
-            linewidth=1.5,
-            edgecolor=color,
-            facecolor=COLORS["white"],
-        )
-    )
-    ax.text(
-        x + 0.325,
-        y + 0.20,
-        "AC",
-        ha="center",
-        va="center",
-        fontsize=9,
-        fontweight="bold",
-        color=color,
-    )
-    ax.plot(
-        [x + 0.24, x + 0.41],
-        [y - 0.06, y],
-        color=color,
-        linewidth=1.4,
-    )
-    ax.plot(
-        [x + 0.18, x + 0.47],
-        [y - 0.06, y - 0.06],
-        color=color,
-        linewidth=1.4,
-    )
-
-
-def _draw_pages_icon(
-    ax: plt.Axes,
-    x: float,
-    y: float,
-    color: str,
-) -> None:
-    labels = ("PH", "GX", "ST")
-    for index, label in enumerate(labels):
-        offset = index * 0.08
-        ax.add_patch(
-            FancyBboxPatch(
-                (x + offset, y + offset),
-                0.36,
-                0.46,
-                boxstyle="round,pad=0.008,rounding_size=0.02",
-                linewidth=1.2,
-                edgecolor=color,
-                facecolor=COLORS["white"],
-                alpha=0.95,
-            )
-        )
-    ax.text(
-        x + 0.28,
-        y + 0.28,
-        "memory",
-        ha="center",
-        va="center",
-        fontsize=7.5,
-        color=color,
-        fontweight="bold",
-    )
-
-
-def _draw_axes_icon(
-    ax: plt.Axes,
-    x: float,
-    y: float,
-    color: str,
-) -> None:
-    _arrow(ax, (x, y), (x + 0.35, y), color=color)
-    _arrow(ax, (x, y), (x, y + 0.35), color=color)
-    ax.text(x + 0.36, y - 0.02, "x", fontsize=8, color=color)
-    ax.text(x - 0.02, y + 0.36, "y", fontsize=8, color=color)
-
-
 def build_architecture() -> None:
-    fig, ax = plt.subplots(figsize=(15, 8.2), facecolor=COLORS["paper"])
+    fig, ax = plt.subplots(figsize=(15, 7.8), facecolor=COLORS["paper"])
     ax.set_facecolor(COLORS["paper"])
     ax.set_xlim(0, 15)
-    ax.set_ylim(0, 8)
+    ax.set_ylim(0, 7.6)
     ax.axis("off")
 
     ax.text(
         0.5,
-        7.58,
+        7.17,
         "Assetto Corsa autonomous racing closed loop",
-        fontsize=20,
+        fontsize=21,
         fontweight="bold",
         color=COLORS["ink"],
     )
     ax.text(
         0.5,
-        7.18,
-        "Planning -> MPC control -> virtual actuator -> simulator -> telemetry feedback",
+        6.78,
+        "Reference generation -> MPC control -> virtual actuator -> simulator -> telemetry feedback",
         fontsize=11,
         color=COLORS["muted"],
+    )
+    ax.text(
+        0.72,
+        6.28,
+        "REFERENCE AND CONTROL",
+        fontsize=10,
+        fontweight="bold",
+        color=COLORS["cyan"],
+    )
+    ax.text(
+        0.72,
+        3.02,
+        "SIMULATOR PLANT AND TELEMETRY",
+        fontsize=10,
+        fontweight="bold",
+        color=COLORS["green"],
     )
 
     _add_box(
         ax,
         0.7,
-        5.1,
+        4.55,
         2.55,
         1.38,
         "1. Track & path",
@@ -272,7 +134,7 @@ def build_architecture() -> None:
     _add_box(
         ax,
         3.75,
-        5.1,
+        4.55,
         2.55,
         1.38,
         "2. Planning",
@@ -282,7 +144,7 @@ def build_architecture() -> None:
     _add_box(
         ax,
         6.8,
-        5.1,
+        4.55,
         2.55,
         1.38,
         "3. Lateral LMPC",
@@ -292,7 +154,7 @@ def build_architecture() -> None:
     _add_box(
         ax,
         9.85,
-        5.1,
+        4.55,
         2.35,
         1.38,
         "4. Longitudinal MPC",
@@ -302,7 +164,7 @@ def build_architecture() -> None:
     _add_box(
         ax,
         12.7,
-        5.1,
+        4.55,
         1.6,
         1.38,
         "5. Input",
@@ -341,17 +203,13 @@ def build_architecture() -> None:
         edge=COLORS["orange"],
         fill=COLORS["panel"],
     )
-    _draw_car_icon(ax, 11.05, 1.35, COLORS["orange"])
-    _draw_monitor_icon(ax, 12.95, 1.35, COLORS["orange"])
-    _draw_pages_icon(ax, 3.60, 1.42, COLORS["blue"])
-    _draw_axes_icon(ax, 0.92, 1.48, COLORS["green"])
 
     for x in (3.25, 6.3, 9.35, 12.2):
-        _arrow(ax, (x, 5.79), (x + 0.5, 5.79), color=COLORS["cyan"])
+        _arrow(ax, (x, 5.24), (x + 0.5, 5.24), color=COLORS["cyan"])
 
     _arrow(
         ax,
-        (13.5, 5.1),
+        (13.42, 4.55),
         (12.6, 2.78),
         color=COLORS["green"],
         connectionstyle="arc3,rad=0.12",
@@ -399,7 +257,7 @@ def build_architecture() -> None:
     _arrow(
         ax,
         (2.38, 2.7),
-        (1.98, 5.1),
+        (1.98, 4.55),
         color=COLORS["green"],
     )
     ax.text(

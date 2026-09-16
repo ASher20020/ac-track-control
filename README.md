@@ -66,11 +66,7 @@ Tyres:   Michelin PS4 Cup 2
 
 ![Performance dashboard](assets/figures/performance_dashboard.png)
 
-![Latest validated configurations](assets/figures/latest_track_results.png)
-
 ![Zhejiang lateral calibration](assets/figures/lateral_calibration_zhejiang.png)
-
-![Longitudinal braking upgrade](assets/figures/longitudinal_braking_upgrade.png)
 
 The latest candidates combine the 103 lateral weights, measured acceleration
 envelope, reachable planning-brake envelope and isolated track-local speed or
