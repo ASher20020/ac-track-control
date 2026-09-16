@@ -12,7 +12,7 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Patch
 from scipy.interpolate import RegularGridInterpolator
 
 from actc.longitudinal import LongitudinalPedalConfig
-from tools.figure_theme import THEME, apply_dark_theme
+from tools.figure_theme import LIGHT_THEME, apply_light_theme
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -31,11 +31,11 @@ CONFIG_PATH = (
     / "shanghai_final.json"
 )
 
-COLORS = THEME
+COLORS = LIGHT_THEME
 
 
 def _style() -> None:
-    apply_dark_theme()
+    apply_light_theme()
 
 
 def _interp(x: np.ndarray, points: list[float], values: list[float]) -> np.ndarray:
@@ -688,7 +688,7 @@ def build_longitudinal_maps() -> dict[str, object]:
         measured_speed_mesh.ravel(),
         measured_pedal_mesh.ravel(),
         -brake_deceleration.ravel(),
-        color=COLORS["white"],
+        color=COLORS["ink"],
         edgecolors=COLORS["ink"],
         linewidths=0.55,
         s=17,
@@ -698,7 +698,7 @@ def build_longitudinal_maps() -> dict[str, object]:
         acceleration_speed,
         measured_acceleration_pedal_mesh.ravel(),
         acceleration_capability,
-        color=COLORS["white"],
+        color=COLORS["ink"],
         edgecolors=COLORS["ink"],
         linewidths=0.55,
         s=21,
@@ -710,12 +710,6 @@ def build_longitudinal_maps() -> dict[str, object]:
         r"signed acceleration [m/s$^2$]",
         labelpad=12,
         fontsize=11,
-    )
-    ax.set_title(
-        "Throttle surface above zero, brake surface below zero",
-        loc="left",
-        pad=22,
-        fontweight="bold",
     )
     ax.view_init(elev=25, azim=-132)
     ax.set_box_aspect((1.45, 1.0, 0.88))
@@ -751,12 +745,13 @@ def build_longitudinal_maps() -> dict[str, object]:
         color=COLORS["ink"],
     )
     fig.text(
-        0.057,
-        0.935,
-        "Shared speed-pedal plane; brake and throttle modes are mutually exclusive",
-        ha="left",
-        fontsize=10.5,
-        color=COLORS["muted"],
+        0.48,
+        0.895,
+        "Throttle surface above zero, brake surface below zero",
+        ha="center",
+        fontsize=12,
+        fontweight="bold",
+        color=COLORS["ink"],
     )
     fig.text(
         0.057,
@@ -767,6 +762,7 @@ def build_longitudinal_maps() -> dict[str, object]:
         fontsize=9.5,
         color=COLORS["muted"],
     )
+    fig.subplots_adjust(left=0.05, right=0.92, top=0.82, bottom=0.09)
     fig.savefig(FIGURE_DIR / "longitudinal_maps.png", dpi=180)
     plt.close(fig)
     return {

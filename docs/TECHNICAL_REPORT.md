@@ -31,103 +31,18 @@ Assetto Corsa
 
 ![Closed-loop architecture](../assets/figures/closed_loop_architecture.png)
 
-## 1.1 2026-09-16 更新摘要
+## 1.1 最新验证结果（2026-09-17）
 
-本轮工作的重点不是继续堆叠控制模块，而是把横向权重标定、纵向制动链路和
-赛道局部修正做成可重复的闭环流程。
+圈速统一按第一次过线到下一次过线计算。三条赛道共享最终 103 横向权重、
+实测加速包络和可达规划制动包络，仅保留赛道专属的速度包络与赛车线偏移。
 
-最新结果：
+| Track | Human | Automatic | Gap | Tyres out |
+| --- | ---: | ---: | ---: | ---: |
+| Shanghai | 2:16.248 | 2:14.399 | -1.849 s | 1 |
+| Zhejiang | 1:34.329 | 1:36.245 | +1.917 s | 2 |
+| Nordschleife | 7:17.632 | 7:52.546 | +34.914 s | 2 |
 
-| Track | Latest automatic lap | Tyres out | Main change |
-| --- | ---: | ---: | --- |
-| Shanghai | `2:14.399` | 1 | local line + speed offsets |
-| Zhejiang | `1:36.245` | 2 | 103 weights + local055 speed envelope |
-| Nordschleife | `7:52.546` | 2 | corrected crossing-to-crossing time |
-
-### 1.1.1 横向标定
-
-浙赛从 V6 到 V7 的横向权重变化：
-
-| Parameter | V6 | V7 |
-| --- | ---: | ---: |
-| `q_lateral` | 15 | 15 |
-| `q_heading` | 30 | 100 |
-| `q_lateral_velocity` | 2 | 5 |
-| `q_yaw_rate` | 5 | 20 |
-| `r_steer` | 18 | 18 |
-| `rd_steer` | 676 | 676 |
-
-实测改善：
-
-| Metric | V6 | V7 | Change |
-| --- | ---: | ---: | ---: |
-| Yaw error P95 | 0.2672 rad/s | 0.1896 | -29% |
-| Heading error P95 | 0.1202 rad | 0.1040 | -13% |
-| Raw steering step mean | 0.002993 | 0.001963 | -34% |
-| Sideslip RMS | 0.01280 rad | 0.01211 | -5% |
-
-![Zhejiang lateral calibration](../assets/figures/lateral_calibration_zhejiang.png)
-
-后续通过 20 圈空间扫描和 11 圈自适应细化得到最终 103 权重：
-
-```text
-q_lateral = 11.5
-q_heading = 135.0
-q_lateral_velocity = 3.5
-q_yaw_rate = 28.0
-r_steer = 15.0
-rd_steer = 700.0
-```
-
-横向标定流程：
-
-```mermaid
-flowchart LR
-    A["20圈空间扫描<br/>横向权重组合"] --> B["逐圈记录<br/>误差、横摆、侧偏、晃动"]
-    B --> C["响应面与主效应<br/>筛出103与106"]
-    C --> D["A-B-B-A重复确认"]
-    D --> E["固定103权重"]
-    E --> F["仅对局部弯道<br/>speed envelope / line offset"]
-    F --> G["用户确认浙赛local055"]
-```
-
-### 1.1.2 纵向制动链路
-
-重刹问题不是单一参数造成，而是目标速率、预览和规划能力三层同时限制：
-
-1. `target_fall_kmh_s=100` 将实际目标下降率限制在约 `27.8 m/s²`。
-2. 纵向预览曾按“总速度差/总距离”的平均制动生成，实际只请求约
-   `-10 m/s²`。
-3. 规划制动能力和控制请求上限共用一个上限，导致制动距离按不可达能力计算。
-
-修复后的链路：
-
-```mermaid
-flowchart LR
-    A["目标速度下降率<br/>188 km/h/s"] --> B["晚制动预览<br/>按可达减速度生成"]
-    B --> C["规划制动边界<br/>measured × 1.0, cap 17"]
-    C --> D["纵向MPC<br/>q_speed=30<br/>r_accel=0.30<br/>r_jerk=20"]
-    D --> E["控制请求上限<br/>52 m/s²"]
-    E --> F["踏板映射<br/>可达到 >0.8 或 1.0"]
-```
-
-最新制动实测：
-
-| Track | Max brake | P95 brake | Actual decel P95 |
-| --- | ---: | ---: | ---: |
-| Shanghai local-line60 | 1.000 | 0.791 | 13.03 m/s² |
-| Zhejiang local055 | 0.983 | 0.745 | 12.64 m/s² |
-| Nordschleife sync | 0.907 | 0.513 | 9.72 m/s² |
-
-规划加速能力也改为实测 P90 包络：
-
-| Speed | Capability |
-| --- | ---: |
-| 100 km/h | 6.20 m/s² |
-| 140 km/h | 4.45 m/s² |
-| 180 km/h | 3.05 m/s² |
-| 220 km/h | 2.00 m/s² |
-| 280 km/h | 1.85 m/s² |
+![Verified simulator results](../assets/figures/track_results.png)
 
 ## 2. 闭环接口与实时信号
 
@@ -267,7 +182,7 @@ $$
 + \max(0, v-200)g_{\text{hs}}.
 $$
 
-上海 V64 和纽北安全版使用：
+最终上海和纽北配置使用：
 
 $$
 g_{\text{hs}}=0.004\ \text{s/(km/h)}.
@@ -903,6 +818,27 @@ rd_accel = 8
 
 控制问题转换为 condensed QP，并使用 OSQP 在线求解。若 QP 失败，控制器保留上一帧转向命令，而不是输出不可信解。
 
+### 5.6 横向权重调优流程
+
+横向权重调整不再按单项手感迭代，而是把横向误差、航向误差、转向晃动、
+横摆角速度误差和质心侧偏角统一归一化后评分：
+
+$$
+S =
+0.30\tilde e_y
++0.20\tilde e_\psi
++0.20\tilde j_\delta
++0.20\tilde e_r
++0.10\tilde\beta.
+$$
+
+先进行 20 圈空间扫描，再用 11 圈 A-B-B-A 重复确认候选。最终锁定 103：
+`q_lateral=11.5, q_heading=135, q_lateral_velocity=3.5, q_yaw_rate=28,
+r_steer=15, rd_steer=700`。浙赛 V6 到 V7 的横摆误差 P95 降低约 29%，
+原始转向活动降低约 34%，横向路径误差没有回退。
+
+![Zhejiang lateral calibration](../assets/figures/lateral_calibration_zhejiang.png)
+
 ## 6. 纵向 MPC与踏板映射
 
 ```mermaid
@@ -1078,9 +1014,41 @@ $$
 | 100 km/h 加速 | $a_{\mathrm{cmd}}=1.5$ | $a_{\mathrm{coast}}=0.75$，所以 $a_{\mathrm{prop}}=2.25$ | $a_{\mathrm{cap}}(100)=3.2$，所以 $T\approx0.703$ |
 | 120 km/h 滑行 | $a_{\mathrm{cmd}}=-0.85$ | $a_{\mathrm{prop}}\approx0$ | 进入滑行死区，$T=B=0$ |
 
-如果同时有较大转向或后轮滑移，输出还会经过油门限制：
-转向只降低允许油门，滑移超过阈值后进一步削减油门；
-油门和刹车不会同时大于零。
+油门还会经过转向和滑移共同限制。令实际输出为
+$T_{\mathrm{cmd}}$，则：
+
+$$
+T_{\mathrm{steer}}
+=
+1-0.25\min(|\delta|,1),
+$$
+
+$$
+T_{\mathrm{slip}}
+=
+\begin{cases}
+1, & |s_r|\leq 0.35,\\
+\operatorname{clamp}
+\left(
+1-0.55\frac{|s_r|-0.35}{0.65},
+0.35,1
+\right), & |s_r|>0.35,
+\end{cases}
+$$
+
+$$
+T_{\mathrm{cmd}}
+\leq
+\min\left(
+T_{\max},
+T_{\mathrm{speed}}(v)
+T_{\mathrm{steer}}
+T_{\mathrm{slip}}
+\right).
+$$
+
+因此转向越大，允许油门越低；后轮滑移超过 `0.35` 后，油门上限继续线性
+下降但保留 `0.35` 的保底比例。刹车请求占优时油门直接置零，二者不会同时输出。
 
 ## 7. 实测结果
 
@@ -1096,12 +1064,12 @@ $$
 | Auto | 2:14.399 |
 | Gap | -0:01.849 |
 | Speed cap | 300 km/h |
-| p95 lateral error | 1.923 m |
+| p95 lateral error | 1.866 m |
 | P95 heading error | 0.0796 rad |
 | Tyres out | 1 |
 
-最新 local-line60 版本加入了两个局部弯道修正，并将纵向重刹链路同步到上海。
-它替换原先 `2:23.543` 的 V63 基线作为当前最佳自动圈。
+最新 local-line60 版本加入了两个局部弯道修正，并使用最终 103 横向权重与
+实测纵向能力包络。
 
 ![Shanghai comparison](../assets/figures/comparison_shanghai.png)
 
@@ -1113,7 +1081,7 @@ $$
 | Auto | 1:36.245 |
 | Gap | +0:01.917 |
 | Speed cap | 280 km/h |
-| p95 lateral error | 1.532 m |
+| p95 lateral error | 1.472 m |
 | P95 heading error | 0.104 rad |
 | Tyres out | 2 |
 
@@ -1124,7 +1092,7 @@ $$
 
 ### 7.3 纽北
 
-V2 safe 版本第一次完整跑完纽北：
+纽北同步版：
 
 | Item | Value |
 | --- | ---: |
@@ -1137,8 +1105,7 @@ V2 safe 版本第一次完整跑完纽北：
 | Tyres out | 2 |
 
 纽北日志中的 `487.891 s` 包含 `15.341 s` 的起步到第一次过线段；
-正式圈速按第一次过线到第二次过线计算为 `472.546 s`。candidate v2 已保存，
-用于修正 `6:30` 切弯和 `7:36-7:40` 颠簸高速段，尚未启动验证。
+正式圈速按第一次过线到第二次过线计算为 `472.546 s`。
 
 ![Nordschleife profile](../assets/figures/nordschleife_profile.png)
 
@@ -1186,40 +1153,21 @@ $$
 
 纽北安全版使用 `1.02 g` 的倍率后上限、`1.2 m` 参考线余量和 `0.65 g` 基础规划横向加速度，最终实现四轮不出界的完整圈。
 
-### 7. 横向权重方向不明确
-
-问题：逐项调参容易只看单个指标，横向误差下降时可能同时增加横摆误差、
-侧偏角和转向晃动。
-
-解决：先做 20 圈固定空间扫描和 11 圈自适应确认，再按横向误差、航向误差、
-晃动、横摆角速度误差和侧偏角做 Pareto 分析。最终锁定 103 权重：
-`11.5 / 135 / 3.5 / 28 / 15 / 700`。
-
-### 8. 制动上限不可达且踏板踩不满
-
-问题：规划制动上限虽然提高到 40 或 52 m/s²，但目标下降率只有
-`100 km/h/s`，预览还把制动需求平均摊到整个预测区间，纵向 MPC 实际只
-请求约 `-10 m/s²`，刹车长期低于 0.6。
-
-解决：将 `target_fall_kmh_s` 提升到 188；预览改为按真实可达减速度和
-刹车点生成；规划制动能力与执行请求上限分离；规划制动采用实测能力包络，
-执行请求保留 52 m/s²。最终浙赛和上海最大刹车达到 `0.983` 和 `1.000`。
-
 ## 9. 自动车与人工驾驶的差异
 
 自动车表现更好的部分：
 
 - 横向轨迹更平滑，横摆角速度的突变较少。
 - 同一配置多次重复性高，浙赛四圈的差异只有几十毫秒。
+- 上海完整圈速比人工快 `1.849 s`。
 - 高速制动和路径跟踪不受驾驶疲劳影响。
-- 在部分上海中速区段，自动车速度比人工高约 `7-12 km/h`。
 
 仍然不足的部分：
 
 - 自动车没有充分利用可用横向抓地力，弯中和出弯速度偏低。
-- 出弯加速通常比人工晚，尤其在浙赛中低速弯。
-- 速度增益表和控制权重仍偏保守，圈速换取稳定性。
-- 纵向模型对高速度和动力系统能力的描述还不完整。
+- 浙赛仍慢 `1.917 s`，纽北慢 `34.914 s`，主要差距集中在低速弯出弯和
+  长距离复合弯。
+- 速度倍率和横向抓地利用率仍需逐赛道继续优化。
 
 ## 10. 扩展到实车
 
@@ -1259,9 +1207,9 @@ python -m tools.build_project_assets
 运行指定赛道配置：
 
 ```powershell
-.\tools\start_v64_shanghai.ps1
-.\tools\start_zhejiang_final.ps1
-.\tools\start_nordschleife_v2_safe.ps1
+.\tools\start_shanghai_frenet_refine_103_latest.ps1
+.\tools\start_zhejiang_refine_103_brake130_fastfall.ps1
+.\tools\start_nordschleife_refine_103_sync.ps1
 ```
 
 完整环境准备和日志命令见 `docs/QUICKSTART.md`。
@@ -1269,8 +1217,7 @@ python -m tools.build_project_assets
 ## 12. 当前边界
 
 - 最终结果基于 Assetto Corsa，不代表实车性能。
-- 上海、浙赛和纽北的最新结果来自不同控制代次，横向权重已统一为 103，
-  但赛道局部 speed envelope 和 line offset 仍需分别保留。
-- 纽北当前验证成绩为修正后的过线到过线时间 `7:52.546`。
-- 纽北 candidate v2 仍是待测试版本，未纳入已验证结果。
+- 三条赛道共享最终横向权重和纵向能力包络，但赛道路线与速度包络必须分别保存。
+- 所有圈速均按过线到过线统计；起步到首次过线的路段不计入圈速。
+- 横向模型仍采用小角度 Frenet 假设，远离参考线时会降级或保持上一帧命令。
 - 原始日志体积较大，公开仓库只保留最终配置、指标、图片和启动脚本。

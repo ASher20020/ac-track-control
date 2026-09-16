@@ -24,10 +24,8 @@ Tyres:   Michelin PS4 Cup 2
 All three current candidates share:
 
 - Frenet lateral MPC with the final 103 weights.
-- Measured acceleration capability from the P90 envelope.
-- Planning braking separated from the command brake limit.
-- `target_fall_kmh_s=188`.
-- Longitudinal MPC `q_speed=30`, `r_accel=0.30`, `r_jerk=20`.
+- Measured acceleration and braking capability envelopes.
+- Track-specific speed envelopes and racing-line offsets.
 
 Lateral weights:
 
@@ -40,10 +38,6 @@ r_steer = 15.0
 rd_steer = 700.0
 ```
 
-The planning brake boundary is capped at the smaller of the configured limit
-and the measured capability envelope. Control requests may exceed that value,
-which is what finally produced full brake-pedal usage.
-
 ## Shanghai
 
 The latest crossing-based automatic lap is `134.399 s`:
@@ -53,13 +47,13 @@ The latest crossing-based automatic lap is `134.399 s`:
 - line offsets `configs/line_offsets/shanghai_local_two_corners.json`
 - local speed envelope `configs/speed_envelopes/shanghai_local_60s.json`
 - maximum-speed cap `300 km/h`
-- p95 lateral error `1.923 m`
+- p95 lateral error `1.866 m`
 - p95 heading error `0.0796 rad`
 - maximum tyres out `1`
 
-The run updates the previous V63 verification result of `143.543 s`. The main
-gain came from the lateral-weight refinement, full brake authority and two
-small track-local corrections rather than a global speed-scale increase.
+The main gain came from the lateral-weight refinement, reachable braking
+planning and two small track-local corrections rather than a global
+speed-scale increase.
 
 The Shanghai human-versus-auto comparison shows:
 
@@ -78,7 +72,7 @@ The latest crossing-based automatic lap is `96.245 s`:
 - config `configs/final/zhejiang_frenet_local055_perfect.json`
 - run record `configs/final/zhejiang_frenet_local055_perfect_run.json`
 - local speed envelope `configs/speed_envelopes/zhejiang_local_055.json`
-- p95 lateral error `1.532 m`
+- p95 lateral error `1.472 m`
 - p95 heading error `0.104 rad`
 - maximum tyres out `2`
 
@@ -112,14 +106,11 @@ crossing-to-crossing lap of `472.546 s`, about `7:52.546`:
 - p95 heading error `0.0636 rad`
 
 The earlier `487.891 s` log value included the pre-line segment and must not be
-used as the lap time. A pending candidate v2 is saved in
-`configs/final/nordschleife_frenet_refine_103_candidate_v2.json` for two
-track-local corrections identified from the recorded lap.
+used as the lap time.
 
-The remaining bottleneck is longitudinal execution, not lateral stability.
-High-speed speed deficits reached `50-87 km/h` at p95 in the main speed bands.
-The most visible case is `480-490 s`, where the target was `300 km/h`, the
-actual speed was about `254 km/h`, and throttle was already saturated.
+The remaining gap is concentrated in track-local low-speed and compound
+corners, where the controller still leaves lateral grip and exit acceleration
+unused.
 
 ![Nordschleife speed and tracking profile](../assets/figures/nordschleife_profile.png)
 

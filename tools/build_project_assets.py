@@ -8,13 +8,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
 
-from tools.figure_theme import THEME, apply_dark_theme
+from tools.figure_theme import (
+    LIGHT_THEME,
+    THEME,
+    apply_dark_theme,
+    apply_light_theme,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FIGURE_DIR = PROJECT_ROOT / "assets" / "figures"
 
-COLORS = THEME
+COLORS = LIGHT_THEME
+TRACK_RESULT_COLORS = THEME
 
 
 def _add_box(
@@ -376,6 +382,7 @@ def build_control_stack() -> None:
 
 
 def build_track_results() -> None:
+    colors = TRACK_RESULT_COLORS
     tracks = [
         {
             "name": "Shanghai",
@@ -387,7 +394,7 @@ def build_track_results() -> None:
             "max_speed": 272.325,
             "lat": 1.866,
             "tyres": 1,
-            "color": COLORS["blue"],
+            "color": colors["blue"],
         },
         {
             "name": "Zhejiang",
@@ -399,7 +406,7 @@ def build_track_results() -> None:
             "max_speed": 237.733,
             "lat": 1.472,
             "tyres": 2,
-            "color": COLORS["green"],
+            "color": colors["green"],
         },
         {
             "name": "Nordschleife",
@@ -411,12 +418,12 @@ def build_track_results() -> None:
             "max_speed": 296.703,
             "lat": 1.185,
             "tyres": 2,
-            "color": COLORS["orange"],
+            "color": colors["orange"],
         },
     ]
-    fig, axes = plt.subplots(1, 3, figsize=(16, 6.4), facecolor=COLORS["paper"])
+    fig, axes = plt.subplots(1, 3, figsize=(16, 6.4), facecolor=colors["paper"])
     for ax, item in zip(axes, tracks):
-        ax.set_facecolor(COLORS["white"])
+        ax.set_facecolor(colors["white"])
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         ax.axis("off")
@@ -428,14 +435,14 @@ def build_track_results() -> None:
                 boxstyle="round,pad=0.015,rounding_size=0.035",
                 linewidth=1.6,
                 edgecolor=item["color"],
-                facecolor=COLORS["white"],
+                facecolor=colors["white"],
             )
         )
-        ax.text(0.1, 0.87, item["name"], fontsize=18, fontweight="bold", color=COLORS["ink"])
-        ax.text(0.1, 0.79, item["length"], fontsize=11, color=COLORS["muted"])
+        ax.text(0.1, 0.87, item["name"], fontsize=18, fontweight="bold", color=colors["ink"])
+        ax.text(0.1, 0.79, item["length"], fontsize=11, color=colors["muted"])
         ax.text(0.1, 0.63, item["label"], fontsize=30, fontweight="bold", color=item["color"])
-        ax.text(0.1, 0.54, "best recorded lap", fontsize=10, color=COLORS["muted"])
-        ax.plot([0.1, 0.9], [0.48, 0.48], color=COLORS["grid"], linewidth=1)
+        ax.text(0.1, 0.54, "best recorded lap", fontsize=10, color=colors["muted"])
+        ax.plot([0.1, 0.9], [0.48, 0.48], color=colors["grid"], linewidth=1)
         rows = [
             ("Human reference", item["human"]),
             ("Max speed", f"{item['max_speed']:.1f} km/h"),
@@ -445,13 +452,13 @@ def build_track_results() -> None:
         ]
         for index, (key, value) in enumerate(rows):
             y = 0.39 - index * 0.09
-            ax.text(0.1, y, key, fontsize=10, color=COLORS["muted"])
-            ax.text(0.9, y, value, fontsize=10, color=COLORS["ink"], ha="right", fontweight="bold")
+            ax.text(0.1, y, key, fontsize=10, color=colors["muted"])
+            ax.text(0.9, y, value, fontsize=10, color=colors["ink"], ha="right", fontweight="bold")
     fig.suptitle(
         "Verified simulator results",
         fontsize=22,
         fontweight="bold",
-        color=COLORS["ink"],
+        color=colors["ink"],
         x=0.055,
         ha="left",
         y=0.98,
@@ -544,11 +551,12 @@ def build_nordschleife_profile() -> None:
 
 def main() -> int:
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    apply_dark_theme()
+    apply_light_theme()
     build_architecture()
     build_control_stack()
-    build_track_results()
     build_nordschleife_profile()
+    apply_dark_theme()
+    build_track_results()
     for path in sorted(FIGURE_DIR.glob("*.png")):
         print(path.relative_to(PROJECT_ROOT))
     return 0

@@ -3,10 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from matplotlib.patches import FancyBboxPatch
 
-from tools.figure_theme import THEME, apply_dark_theme
+from tools.figure_theme import LIGHT_THEME as THEME, apply_light_theme
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -14,7 +13,7 @@ FIGURE_DIR = PROJECT_ROOT / "assets" / "figures"
 
 
 def _style() -> None:
-    apply_dark_theme()
+    apply_light_theme()
     plt.rcParams["axes.titleweight"] = "bold"
 
 
@@ -251,86 +250,10 @@ def build_lateral_calibration() -> None:
     plt.close(fig)
 
 
-def build_tuning_pipeline() -> None:
-    fig, ax = plt.subplots(figsize=(15, 7))
-    fig.patch.set_facecolor(THEME["navy"])
-    ax.set_facecolor(THEME["navy"])
-    ax.set_xlim(0, 15)
-    ax.set_ylim(0, 7)
-    ax.axis("off")
-    stages = (
-        ("20-lap scan", "Fixed space-filling\nlateral-weight scan", THEME["blue"]),
-        ("11-lap refine", "A-B-B-A confirmation\n103 selected", THEME["orange"]),
-        ("Local correction", "Narrow speed envelope\nand line offset", THEME["green"]),
-        ("Brake pipeline", "Reachable planning brake\n+ 52 m/s² command", "#C44B3D"),
-    )
-    xs = (0.6, 4.2, 7.8, 11.4)
-    for index, ((title, body, color), x) in enumerate(zip(stages, xs)):
-        ax.add_patch(
-            FancyBboxPatch(
-                (x, 1.5),
-                2.7,
-                4.0,
-                boxstyle="round,pad=0.12,rounding_size=0.18",
-                linewidth=2,
-                edgecolor=color,
-                facecolor="#0B1A28",
-            )
-        )
-        ax.text(
-            x + 1.35,
-            4.75,
-            title,
-            ha="center",
-            va="center",
-            color=color,
-            fontsize=15,
-            fontweight="bold",
-        )
-        ax.text(
-            x + 1.35,
-            3.15,
-            body,
-            ha="center",
-            va="center",
-            color="#F4F7FB",
-            fontsize=13,
-            linespacing=1.5,
-        )
-        if index < len(stages) - 1:
-            ax.add_patch(
-                FancyArrowPatch(
-                    (x + 2.75, 3.5),
-                    (xs[index + 1] - 0.05, 3.5),
-                    arrowstyle="-|>",
-                    mutation_scale=20,
-                    linewidth=2.5,
-                    color=THEME["grid"],
-                )
-            )
-    ax.text(
-        7.5,
-        6.3,
-        "Lateral calibration to full-braking closed loop",
-        ha="center",
-        color="#F4F7FB",
-        fontsize=20,
-        fontweight="bold",
-    )
-    fig.tight_layout()
-    fig.savefig(
-        FIGURE_DIR / "tuning_pipeline_20260916.png",
-        dpi=170,
-        facecolor=fig.get_facecolor(),
-    )
-    plt.close(fig)
-
-
 def main() -> int:
     _style()
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     build_lateral_calibration()
-    build_tuning_pipeline()
     print("Wrote evening summary figures")
     return 0
 

@@ -4,6 +4,10 @@ All public figures are generated from project code or measured CSV logs. The
 raw logs are excluded from the public repository, but the final metrics and
 source mapping remain in `configs/final/manifest.json`.
 
+The cover, verified lap-time cards and track speed maps use the dark
+presentation theme. Engineering diagrams, model diagnostics and comparison
+plots use the light documentation theme.
+
 ## Project cover
 
 ![Project cover](../assets/figures/hero_overview.png)

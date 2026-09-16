@@ -16,7 +16,7 @@ from tools.build_comparison_figures import (
     find_auto_fastest_lap,
     find_manual_fastest_lap,
 )
-from tools.figure_theme import THEME, apply_dark_theme
+from tools.figure_theme import LIGHT_THEME, THEME, apply_dark_theme, apply_light_theme
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -1218,6 +1218,13 @@ def main() -> int:
     }
     selected = [args.only] if args.only else list(builders)
     for name in selected:
+        global COLORS
+        if name in {"dashboard", "calibration"}:
+            COLORS = LIGHT_THEME
+            apply_light_theme()
+        else:
+            COLORS = THEME
+            apply_dark_theme()
         builders[name]()
         print(FIGURE_DIR / outputs[name])
     return 0

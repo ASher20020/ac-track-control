@@ -21,6 +21,24 @@ THEME = {
     "cream": "#F5F7FA",
 }
 
+LIGHT_THEME = {
+    "ink": "#0F172A",
+    "muted": "#64748B",
+    "grid": "#D7E0EA",
+    "paper": "#F4F7FB",
+    "white": "#FFFFFF",
+    "panel": "#E8EEF5",
+    "border": "#C7D3E0",
+    "blue": "#2563EB",
+    "cyan": "#0891B2",
+    "green": "#059669",
+    "orange": "#D97706",
+    "red": "#DC5266",
+    "navy": "#F4F7FB",
+    "navy_2": "#FFFFFF",
+    "cream": "#0F172A",
+}
+
 
 def apply_dark_theme() -> None:
     plt.rcParams.update(
@@ -52,6 +70,42 @@ def apply_dark_theme() -> None:
                     THEME["cyan"],
                     THEME["green"],
                     THEME["red"],
+                ]
+            ),
+        }
+    )
+
+
+def apply_light_theme() -> None:
+    plt.rcParams.update(
+        {
+            "font.sans-serif": [
+                "Microsoft YaHei",
+                "Bahnschrift",
+                "Segoe UI",
+                "DejaVu Sans",
+            ],
+            "axes.unicode_minus": False,
+            "figure.facecolor": LIGHT_THEME["paper"],
+            "savefig.facecolor": LIGHT_THEME["paper"],
+            "axes.facecolor": LIGHT_THEME["white"],
+            "axes.edgecolor": LIGHT_THEME["border"],
+            "axes.labelcolor": LIGHT_THEME["ink"],
+            "axes.titlecolor": LIGHT_THEME["ink"],
+            "text.color": LIGHT_THEME["ink"],
+            "xtick.color": LIGHT_THEME["muted"],
+            "ytick.color": LIGHT_THEME["muted"],
+            "grid.color": LIGHT_THEME["grid"],
+            "legend.edgecolor": LIGHT_THEME["border"],
+            "legend.facecolor": LIGHT_THEME["white"],
+            "legend.labelcolor": LIGHT_THEME["ink"],
+            "axes.prop_cycle": plt.cycler(
+                color=[
+                    LIGHT_THEME["blue"],
+                    LIGHT_THEME["orange"],
+                    LIGHT_THEME["cyan"],
+                    LIGHT_THEME["green"],
+                    LIGHT_THEME["red"],
                 ]
             ),
         }

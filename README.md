@@ -129,9 +129,9 @@ python -m actc.prepare_input --x360
 Launch one of the final candidates:
 
 ```powershell
-.\tools\start_v64_shanghai.ps1
-.\tools\start_zhejiang_final.ps1
-.\tools\start_nordschleife_v2_safe.ps1
+.\tools\start_shanghai_frenet_refine_103_latest.ps1
+.\tools\start_zhejiang_refine_103_brake130_fastfall.ps1
+.\tools\start_nordschleife_refine_103_sync.ps1
 ```
 
 Read `docs/QUICKSTART.md` for the complete workflow.
