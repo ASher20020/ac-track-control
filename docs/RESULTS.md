@@ -4,6 +4,11 @@ All lap times below are derived from complete laps in the original CSV logs.
 The public repository excludes the raw logs because they are large, but every
 number has a corresponding source path in `configs/final/manifest.json`.
 
+```text
+Vehicle: BMW M4 Competition (G82)
+Tyres:   Michelin PS4 Cup 2
+```
+
 ## Summary
 
 | Track | Human teaching lap | Best automatic lap | Gap | Automatic max speed | Tyres out | Status |

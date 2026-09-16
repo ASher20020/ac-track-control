@@ -2,6 +2,10 @@
   "project": "AC Track Control",
   "generated_on": "2026-09-14",
   "shared_vehicle_model": "configs/models/lmpc_calibrated_model_v10.json",
+  "validation_platform": {
+    "vehicle": "BMW M4 Competition (G82)",
+    "tyres": "Michelin PS4 Cup 2"
+  },
   "tracks": {
     "shanghai": {
       "status": "validated_baseline_with_final_candidate",

@@ -6,6 +6,15 @@
 
 ![Project overview](../assets/figures/hero_overview.png)
 
+统一实验平台：
+
+| Item | Configuration |
+| --- | --- |
+| Vehicle | BMW M4 Competition (G82) |
+| Tyres | Michelin PS4 Cup 2 |
+| Simulator | Assetto Corsa |
+| AC car model | `uk_bmw_m4_g82` |
+
 系统的核心链路是：
 
 ```text

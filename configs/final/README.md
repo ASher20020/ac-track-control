@@ -16,3 +16,10 @@ The shared identified vehicle model is stored at
 The configuration files only contain controller and planning parameters.
 Track layout resolution, maximum speed, path clearance and execution limits are
 set by the launcher scripts under `tools/`.
+
+Shared validation platform:
+
+```text
+Vehicle: BMW M4 Competition (G82)
+Tyres:   Michelin PS4 Cup 2
+```

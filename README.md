@@ -34,7 +34,16 @@
   <img src="https://img.shields.io/badge/Control-50%20Hz-132238?style=for-the-badge" alt="50 Hz closed-loop control">
   <img src="https://img.shields.io/badge/Lateral%20LMPC-20%20x%2020%20ms-132238?style=for-the-badge" alt="Lateral LMPC 20 by 20 ms">
   <img src="https://img.shields.io/badge/Longitudinal%20MPC-50%20x%2050%20ms-132238?style=for-the-badge" alt="Longitudinal MPC 50 by 50 ms">
+  <img src="https://img.shields.io/badge/Vehicle-BMW%20M4%20Competition%20G82-132238?style=for-the-badge" alt="BMW M4 Competition G82">
+  <img src="https://img.shields.io/badge/Tyres-Michelin%20PS4%20Cup%202-132238?style=for-the-badge" alt="Michelin PS4 Cup 2">
 </p>
+
+统一实验平台：
+
+```text
+Vehicle: BMW M4 Competition (G82)
+Tyres:   Michelin PS4 Cup 2
+```
 
 ## Verified results
 
