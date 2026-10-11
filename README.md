@@ -142,6 +142,7 @@ Read `docs/QUICKSTART.md` for the complete workflow.
 - [Figure gallery](docs/FIGURES.md)
 - [Paper-style MPC equations](docs/assets/build/mpc_equations.pdf)
 - [Quick start](docs/QUICKSTART.md)
+- [Reproducibility](docs/REPRODUCIBILITY.md)
 - [Verified results](docs/RESULTS.md)
 - [Real-car transfer](docs/REAL_CAR_TRANSFER.md)
 - [Final configuration manifest](configs/final/manifest.json)

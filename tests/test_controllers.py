@@ -923,15 +923,17 @@ class TrackControllerGeometryTests(unittest.TestCase):
     def test_round_two_tuning_state_and_model_load(self) -> None:
         root = Path(__file__).resolve().parents[1]
         tuning = _load_tuning_state(
-            root / "configs" / "lmpc_round2_start.json"
+            root / "configs" / "final" / "shanghai_frenet_refine_103_latest.json"
         )
         model = _load_mpc_parameters(
-            root / "logs" / "autotune_10_laps_mpc_analysis.json"
+            root / "configs" / "models" / "lmpc_calibrated_model_v10.json"
         )
         self.assertEqual(
             tuning["speed_scale_by_band"],
-            [1.0, 1.45, 1.45, 1.36],
+            [1.16, 1.23, 1.24, 1.26, 1.28, 1.28, 1.29, 1.30, 1.31],
         )
+        self.assertEqual(tuning["controller"]["q_lateral"], 11.5)
+        self.assertEqual(tuning["controller"]["q_heading"], 135.0)
         self.assertIsNotNone(model)
         assert model is not None
         self.assertGreater(
