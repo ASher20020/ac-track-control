@@ -58,7 +58,7 @@ Tyres:   Michelin PS4 Cup 2
 
 | Track | Human | Auto | Gap | Auto max speed | Tyres out | Status |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Shanghai | 136.248 s | 134.399 s | -1.849 s | 300 km/h cap | 1 | local-line60 candidate |
+| Shanghai | 133.994 s | 134.399 s | +0.405 s | 300 km/h cap | 1 | local-line60 candidate |
 | Zhejiang | 94.329 s | 96.245 s | +1.917 s | 280 km/h cap | 2 | local055 user-confirmed candidate |
 | Nordschleife | 7:17.632 | 7:52.546 | +34.914 s | 300 km/h cap | 2 | corrected crossing-to-crossing result |
 

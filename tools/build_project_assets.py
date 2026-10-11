@@ -389,7 +389,7 @@ def build_track_results() -> None:
             "length": "5.43 km",
             "lap": 134.399,
             "label": "2:14.399",
-            "human": "2:16.248",
+            "human": "2:13.994",
             "status": "local-line60; latest candidate",
             "max_speed": 272.325,
             "lat": 1.866,

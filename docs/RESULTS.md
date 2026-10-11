@@ -13,7 +13,7 @@ Tyres:   Michelin PS4 Cup 2
 
 | Track | Human teaching lap | Best automatic lap | Gap | Automatic max speed | Tyres out | Status |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Shanghai | 136.248 s | 134.399 s | -1.849 s | 300 km/h cap | 1 | local-line60 candidate |
+| Shanghai | 133.994 s | 134.399 s | +0.405 s | 300 km/h cap | 1 | local-line60 candidate |
 | Zhejiang | 94.329 s | 96.245 s | +1.917 s | 280 km/h cap | 2 | local055 user-confirmed candidate |
 | Nordschleife | 7:17.632 | 7:52.546 | +34.914 s | 300 km/h cap | 2 | corrected crossing-to-crossing result |
 
@@ -50,6 +50,10 @@ The latest crossing-based automatic lap is `134.399 s`:
 - p95 lateral error `1.866 m`
 - p95 heading error `0.0796 rad`
 - maximum tyres out `1`
+
+The current human reference on Shanghai is `133.994 s` from Content Manager, so
+the automatic lap is `0.405 s` behind. The comparison trace below still uses the
+older `136.248 s` human log because that is the available full telemetry.
 
 The main gain came from the lateral-weight refinement, reachable braking
 planning and two small track-local corrections rather than a global

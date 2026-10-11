@@ -419,8 +419,8 @@ def build_track_maps() -> None:
             "name": "Shanghai",
             "auto_path": PROJECT_ROOT / "logs" / "lmpc_shanghai_frenet_refine_103_latest_local_line60.csv",
             "display_time": 134.399,
-            "human_time": 136.248,
-            "gap_s": -1.849,
+            "human_time": 133.994,
+            "gap_s": 0.405,
             "color": COLORS["blue"],
             "track_name": "tr_shanghai",
             "configuration": "advanced",
@@ -620,7 +620,7 @@ def build_performance_dashboard() -> None:
 
     ax_gap = fig.add_subplot(grid[0, 0])
     tracks = ["Shanghai", "Zhejiang"]
-    gaps = [-1.849, 1.917]
+    gaps = [0.405, 1.917]
     colors = [COLORS["blue"], COLORS["green"]]
     bars = ax_gap.barh(tracks, gaps, color=colors, height=0.48)
     for bar, gap in zip(bars, gaps):

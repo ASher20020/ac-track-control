@@ -29,7 +29,9 @@
         "line_offset_envelope": "configs/line_offsets/shanghai_local_two_corners.json",
         "speed_envelope": "configs/speed_envelopes/shanghai_local_60s.json",
         "lap_time_s": 134.469,
-        "max_tyres_out": 1
+        "max_tyres_out": 1,
+        "human_reference_lap_s": 133.994,
+        "human_reference_source": "Content Manager best-lap display, Shanghai / China Grand Prix advanced / BMW M4 G82 Competition"
       }
     },
     "zhejiang": {
