@@ -3,6 +3,8 @@
   "human_lap_s": 136.24796799989417,
   "auto_lap_s": 134.39897300000302,
   "gap_s": -1.848994999891147,
+  "human_best_s": 133.994,
+  "human_best_gap_s": 0.40497300000302516,
   "human_max_speed_kmh": 273.180847,
   "auto_max_speed_kmh": 272.325104,
   "auto_p95_abs_lateral_error_m": 1.865726,

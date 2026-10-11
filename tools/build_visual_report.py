@@ -686,9 +686,9 @@ def build_performance_dashboard() -> None:
 
     ax_speed = fig.add_subplot(grid[1, 0])
     labels = [
-        "Shanghai\nhuman",
+        "Shanghai\nhuman ref",
         "Shanghai\nauto",
-        "Zhejiang\nhuman",
+        "Zhejiang\nhuman ref",
         "Zhejiang\nauto",
         "Nordschleife\nauto",
     ]

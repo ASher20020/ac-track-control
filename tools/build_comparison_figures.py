@@ -110,6 +110,9 @@ def build_comparison(
     output_path: Path,
     metrics_path: Path,
     bin_m: float,
+    human_trace_label: str | None = None,
+    result_note: str | None = None,
+    human_best_s: float | None = None,
 ) -> dict[str, object]:
     human = pd.read_csv(human_path).sort_values("timestamp")
     auto = pd.read_csv(auto_path).sort_values("timestamp")
@@ -200,7 +203,7 @@ def build_comparison(
         human_speed,
         color=COLORS["human"],
         linewidth=1.7,
-        label=f"Human {human_time:.3f} s",
+        label=human_trace_label or f"Human {human_time:.3f} s",
     )
     axes[0].plot(
         grid / 1000.0,
@@ -211,6 +214,23 @@ def build_comparison(
     )
     axes[0].set_ylabel("speed [km/h]")
     axes[0].legend(loc="best")
+    if result_note:
+        axes[0].text(
+            0.012,
+            0.965,
+            result_note,
+            transform=axes[0].transAxes,
+            ha="left",
+            va="top",
+            fontsize=9.5,
+            color=COLORS["ink"],
+            bbox={
+                "boxstyle": "round,pad=0.35",
+                "facecolor": COLORS["white"],
+                "edgecolor": COLORS["grid"],
+                "alpha": 0.92,
+            },
+        )
 
     axes[1].plot(
         grid / 1000.0,
@@ -264,6 +284,10 @@ def build_comparison(
         "human_lap_s": human_time,
         "auto_lap_s": auto_time,
         "gap_s": auto_time - human_time,
+        "human_best_s": human_best_s,
+        "human_best_gap_s": (
+            auto_time - human_best_s if human_best_s is not None else None
+        ),
         "human_max_speed_kmh": float(human_lap["speed_kmh"].max()),
         "auto_max_speed_kmh": float(auto_lap["speed_kmh"].max()),
         "auto_p95_abs_lateral_error_m": float(
@@ -322,6 +346,12 @@ def main() -> int:
             "track_length_m": 5426.853590742263,
             "figure": "comparison_shanghai.png",
             "metrics": "comparison_shanghai_metrics.json",
+            "human_trace_label": "Human reference telemetry 136.248 s",
+            "result_note": (
+                "Current best | Human 2:13.994 s | Auto 2:14.399 s | "
+                "Gap +0.405 s"
+            ),
+            "human_best_s": 133.994,
         },
         {
             "label": "Zhejiang: Human vs Auto",
@@ -350,6 +380,9 @@ def main() -> int:
             output_path=FIGURE_DIR / str(spec["figure"]),
             metrics_path=DATA_DIR / str(spec["metrics"]),
             bin_m=args.bin_m,
+            human_trace_label=spec.get("human_trace_label"),
+            result_note=spec.get("result_note"),
+            human_best_s=spec.get("human_best_s"),
         )
         print(json.dumps(metrics, indent=2))
     return 0
